@@ -1,0 +1,509 @@
+================================================================
+CLAIRVISION — CLAUDE CODE CONTEXT FILE
+================================================================
+Read this entire file before writing any code.
+This is the source of truth for what to build, which models
+to use, and how every feature must behave. Structure and
+schema are your decisions — optimise them however you see fit.
+================================================================
+
+
+================================================================
+WHAT WE ARE BUILDING
+================================================================
+
+ClairVision is an AI-powered event photo curation system.
+
+A photographer uploads thousands of raw event images. The
+system automatically cleans and organises them through a
+three-stage ML pipeline, then serves a web interface where
+users can browse the curated gallery and find every photo
+they personally appear in.
+
+The system has two distinct parts:
+
+1. A heavy ML pipeline that runs once per event (GPU-bound,
+   batch, triggered on demand).
+
+2. A lightweight web interface + API that serves the results
+   of that pipeline in real time (CPU-only, always-on).
+
+These two parts must be decoupled. The pipeline running must
+never block or slow down the web interface.
+
+
+================================================================
+TECH STACK — EXACT, DO NOT SUBSTITUTE
+================================================================
+
+ML models:
+  - CLIP ViT-L/14       visual semantic embeddings
+  - MTCNN               face detection and landmark alignment
+  - ArcFace             face identity embeddings (via insightface,
+                        buffalo_l model)
+  - NIMA                learned image quality scoring (PyTorch)
+  - Laplacian variance  blur pre-filter (OpenCV)
+
+Infrastructure:
+  - Python 3.11
+  - FastAPI
+  - Celery + Redis      async pipeline worker queue
+  - PostgreSQL + pgvector
+  - FAISS               nearest-neighbour vector search
+  - Next.js 14          frontend (App Router)
+  - Tailwind CSS
+  - Three.js            WebGL cluster visualisation
+  - Docker + Docker Compose
+
+Do not swap any model or library for an alternative.
+If a package has a version conflict, resolve it — do not
+replace the model.
+
+
+================================================================
+THE PIPELINE — THREE SEQUENTIAL STAGES
+================================================================
+
+Triggered once per event. Stages run in order.
+A later stage only processes images that passed the previous one.
+
+────────────────────────────────────────────────────────
+STAGE 1 — BLUR & QUALITY FILTERING
+────────────────────────────────────────────────────────
+Goal: discard images that are not worth showing to anyone.
+This stage runs first because it is cheap and eliminates
+work for the more expensive stages that follow.
+
+Two-step scoring:
+  Step 1 — Laplacian variance (OpenCV).
+    Fast, runs on every image first.
+    Images below the sharpness threshold are immediately
+    marked as rejected and go no further.
+
+  Step 2 — NIMA quality score.
+    Runs only on images that passed Step 1.
+    NIMA scores aesthetic and technical quality (0–10).
+    Images below the quality threshold are rejected.
+
+Only images that pass both steps continue to Stage 2.
+All thresholds must be configurable via environment variables.
+
+────────────────────────────────────────────────────────
+STAGE 2 — DUPLICATE DETECTION & BEST FRAME SELECTION
+────────────────────────────────────────────────────────
+Goal: from burst sequences and near-identical frames,
+surface only the single best image per group.
+
+How it works:
+  1. Generate a CLIP ViT-L/14 embedding for every image
+     that passed Stage 1.
+
+  2. Cluster images by visual similarity. Images above the
+     cosine similarity threshold belong to the same group.
+     Use union-find or equivalent for efficient grouping.
+     Threshold must be configurable via environment variable.
+
+  3. Within each group, score every image using a weighted
+     combination of its Laplacian sharpness score and its
+     NIMA quality score. If MTCNN detects a face in an image
+     with high confidence, apply a bonus to its score —
+     photos with clear faces should be preferred over
+     identical compositions without them.
+
+  4. Auto-select the highest-scoring image in each group.
+     The user can override this selection later via the UI.
+     All images in the group are retained — only the
+     selection changes.
+
+Single images with no near-duplicates are always selected.
+
+────────────────────────────────────────────────────────
+STAGE 3 — FACE DETECTION & IDENTITY INDEXING
+────────────────────────────────────────────────────────
+Goal: detect every face in the curated set and build an
+identity index that powers instant face search.
+
+This stage runs only on the selected images from Stage 2.
+
+How it works:
+  1. Run MTCNN on each image. Detect all faces.
+     Ignore detections smaller than 40×40 pixels —
+     they are too small for reliable identity matching.
+
+  2. For each detected face, use MTCNN landmarks to align
+     the face crop to a standard 112×112 frame.
+
+  3. Run ArcFace (insightface buffalo_l) on each aligned
+     crop. Generate a 512-dimensional L2-normalised
+     identity embedding.
+
+  4. Store all embeddings and index them with FAISS for
+     sub-second nearest-neighbour retrieval.
+
+Why ArcFace over FaceNet:
+  ArcFace uses additive angular margin loss, producing a
+  more discriminative embedding space. It handles the hard
+  cases that matter in event photography — small faces,
+  off-angle poses, crowd distance shots, mixed lighting —
+  significantly better than FaceNet's triplet loss approach.
+  Use ArcFace exclusively. Do not add FaceNet.
+
+When all three stages complete, mark the event as ready
+and make the gallery available in the UI.
+
+
+================================================================
+ACCURACY REQUIREMENTS — NON-NEGOTIABLE
+================================================================
+
+These are the behaviours the system must achieve.
+Do not cut corners on model choice or inference settings
+to hit these. These are the whole point of the project.
+
+Blur filtering:
+  A clearly blurry or out-of-focus image must never appear
+  in the curated gallery. False positives (rejecting a sharp
+  image) are acceptable at a low rate. False negatives
+  (passing a blurry image) are not.
+
+Duplicate selection:
+  Near-identical burst frames must always be collapsed to
+  a single representative image. The selected image must
+  be visually the sharpest and best-composed of the group.
+  The user must never see two near-identical images in the
+  default gallery view.
+
+Face search:
+  When a user searches by face, every photo in the gallery
+  containing that person must be returned. Missing a match
+  (false negative) is the critical failure mode. A small
+  number of false positives (returning a photo of a similar
+  but different person) is acceptable.
+
+  To achieve this:
+  - Use ArcFace buffalo_l, not a lighter variant.
+  - L2-normalise all embeddings before storage and search.
+  - Set the similarity threshold conservatively (err toward
+    recall over precision). Threshold must be configurable.
+  - Minimum face size of 40×40px is the floor — do not
+    raise it to speed up processing.
+
+
+================================================================
+FEATURES — EXACT BEHAVIOUR
+================================================================
+
+────────────────────────────────────────────────────────
+GALLERY — BROWSE MODE
+────────────────────────────────────────────────────────
+The default view. Shows all selected images from Stage 2.
+Blurry images and non-selected duplicates are never shown
+here by default.
+
+Each image card displays:
+  - The photo
+  - A badge showing how many faces were detected (if any)
+  - If the image belongs to a duplicate group: an indicator
+    showing how many other shots exist in that group
+
+Clicking the duplicate indicator expands a drawer or panel
+showing all images in that group. The user can click any
+image in the group to swap it as the selected frame. The
+gallery updates immediately to reflect the new selection.
+
+Pagination or infinite scroll — your choice, but the gallery
+must feel fast even with 10,000+ images.
+
+────────────────────────────────────────────────────────
+FACE SEARCH — TWO ENTRY POINTS
+────────────────────────────────────────────────────────
+Users can find every photo they appear in via either method:
+
+Method A — Upload a selfie:
+  User uploads any photo of themselves.
+  System detects the face in the upload using MTCNN,
+  generates an ArcFace embedding, and searches the index.
+  If no face is detected in the uploaded image, show a
+  clear error message asking for a clearer photo.
+
+Method B — Click a face in the gallery:
+  Any face detected in the gallery has a clickable overlay.
+  Clicking a face uses its pre-computed ArcFace embedding
+  directly as the search query — no re-inference needed.
+
+Both methods return a results view showing all matched
+images ranked by similarity score. Display the similarity
+score on each result card.
+
+────────────────────────────────────────────────────────
+CLUSTER VISUALISATION
+────────────────────────────────────────────────────────
+A separate view that renders the CLIP embeddings for an
+event as an interactive 2D scatter plot using Three.js.
+
+Reduce embeddings to 2D using UMAP (run server-side,
+return coordinates to the frontend).
+
+Each point represents one image. Points are coloured by
+their duplicate group. Clicking a point shows a thumbnail
+of that image.
+
+This gives users an intuitive map of the event's visual
+content — clusters of similar scenes, separate groups of
+portraits, etc.
+
+────────────────────────────────────────────────────────
+EVENT INGESTION
+────────────────────────────────────────────────────────
+A simple interface to submit a new event for processing.
+Takes an event name and a source URL (remote image collection).
+Shows pipeline status: pending → processing → ready.
+The gallery becomes accessible once status is ready.
+
+
+================================================================
+FRONTEND DESIGN — MINIMALISTIC
+================================================================
+
+The UI must feel like a professional photography tool, not a
+generic web app. The design language is minimal, quiet, and
+image-first. The photos are the product — the UI gets out of
+the way.
+
+OVERALL AESTHETIC
+  - Dark background throughout. Near-black (#0a0a0a or similar),
+    not pure black. This makes photos pop and matches how
+    photographers expect to review work.
+  - No decorative elements, gradients, illustrations, or
+    background textures. Flat surfaces only.
+  - Typography: a single clean sans-serif (Inter or Geist).
+    Two weights only — regular and medium. No bold headings,
+    no oversized hero text.
+  - Colour palette: near-black background, white/off-white text,
+    one single accent colour (a muted blue or neutral tone)
+    used sparingly for interactive elements only. No colour
+    used decoratively.
+  - Generous whitespace. Let images breathe. Do not pack the
+    UI with controls.
+
+NAVIGATION
+  - Minimal top bar. Logo/name on the left, navigation links
+    on the right. Nothing else.
+  - No sidebar. No drawers visible by default.
+  - Active state on nav links should be subtle — a small
+    underline or slightly brighter text, not a filled pill.
+
+GALLERY
+  - Clean masonry or uniform grid layout. No card shadows,
+    no card borders. Images sit directly on the background.
+  - Hover state on an image: a very subtle overlay with only
+    the essential metadata (face count, duplicate indicator).
+    Nothing on hover by default — reveal on hover only.
+  - The duplicate group drawer opens as an inline expansion
+    below the image row, not a modal or sidebar.
+  - No visible pagination controls if using infinite scroll.
+    If using pagination, use minimal prev/next text links —
+    no numbered page buttons.
+
+FACE SEARCH
+  - The selfie upload zone should be a simple dashed border
+    rectangle with a single line of instruction text.
+    No icons, no illustrations.
+  - Search results appear below the input in the same layout
+    as the gallery grid. No separate results page.
+  - Similarity score shown as a small muted percentage tag
+    on each result card. Subtle, not prominent.
+
+CLUSTER VIEW
+  - The Three.js canvas fills the full available area.
+  - No axes, no gridlines, no legend panels cluttering the view.
+  - Tooltip on point hover: thumbnail only, no text overlay.
+  - Minimal controls: a single zoom reset button, nothing else.
+
+EVENT INGESTION / STATUS
+  - Plain text form. Two inputs (name, URL), one submit button.
+  - Pipeline status shown as a single line of text below the
+    form: "Processing..." or "Ready — 4,312 images curated."
+  - No progress bars, no spinners beyond a minimal animated dot.
+
+LOADING & EMPTY STATES
+  - Loading: skeleton placeholders that match the grid layout.
+    No spinner components.
+  - Empty state: a single short sentence. No illustrations.
+
+GENERAL RULES
+  - No modals unless absolutely unavoidable.
+  - No toast notifications stacking in a corner — use inline
+    status text instead.
+  - No unnecessary animations. Transitions where they exist
+    must be under 150ms and functional, not decorative.
+  - Mobile responsive, but the primary experience is desktop.
+    On mobile, single column layout, same design language.
+
+
+================================================================
+INFRASTRUCTURE REQUIREMENTS
+================================================================
+
+The pipeline worker and the API must run in separate containers.
+The pipeline container needs GPU access (nvidia runtime).
+The API container is CPU-only.
+
+Use Docker Compose to wire everything together locally.
+Services needed: PostgreSQL with pgvector, Redis, pipeline
+worker, FastAPI, Next.js frontend.
+
+Original images must never be permanently stored on disk.
+Stream from the remote source URL, process in memory or
+via a temp file, then discard. Only embeddings and metadata
+are persisted.
+
+All ML models are loaded once at worker startup — not per
+image, not per task. Reloading models per inference is
+unacceptable for throughput.
+
+All thresholds (blur, quality, duplicate similarity, face
+search similarity, minimum face size) must be driven by
+environment variables with sensible defaults. Never hardcode
+a threshold in logic.
+
+FAISS indexes are per-event. Serialise them to disk so they
+survive container restarts. Load from disk on startup if
+available; build fresh if not.
+
+Include a README covering setup, how to run with Docker
+Compose, and how to trigger a pipeline run.
+
+The .env.example must be pre-filled with the values below.
+These are not placeholders — they are the accuracy-optimised
+defaults. Do not change them unless explicitly asked to.
+Every value has a comment explaining why it is set that way.
+
+─────────────────────────────────────────────────────────
+.env.example — PRE-FILLED, ACCURACY-OPTIMISED
+─────────────────────────────────────────────────────────
+
+# ── Database ──────────────────────────────────────────
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_DB=clairvision
+POSTGRES_USER=clairvision
+POSTGRES_PASSWORD=changeme
+
+# ── Redis ─────────────────────────────────────────────
+REDIS_URL=redis://redis:6379/0
+
+# ── Frontend ──────────────────────────────────────────
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# ── CLIP ──────────────────────────────────────────────
+CLIP_MODEL=ViT-L/14
+# ViT-L/14 is the largest standard CLIP model. Do not
+# downgrade to ViT-B/32 or ViT-B/16 — they produce weaker
+# embeddings and will hurt duplicate clustering quality.
+
+# ── ArcFace ───────────────────────────────────────────
+ARCFACE_MODEL=buffalo_l
+# buffalo_l is insightface's highest-accuracy pack.
+# buffalo_s and buffalo_sc are faster but significantly
+# less accurate on non-frontal and small faces.
+# Do not change this.
+
+# ── NIMA ──────────────────────────────────────────────
+NIMA_WEIGHTS_PATH=/app/weights/nima.pth
+# Path to the pretrained NIMA weights inside the container.
+
+# ── Stage 1: Blur & Quality Thresholds ────────────────
+BLUR_LAPLACIAN_THRESHOLD=80
+# Laplacian variance below this → image is blurry.
+# 80 is intentionally conservative (lower = less aggressive
+# rejection). Raising this rejects more images but risks
+# discarding acceptable shots with shallow depth of field.
+
+BLUR_NIMA_THRESHOLD=4.2
+# NIMA score below this (out of 10) → image is rejected.
+# 4.2 is the calibrated threshold for technical quality.
+# Do not raise above 4.5 — it will reject too many valid
+# event photos which are rarely studio-grade.
+
+# ── Stage 2: Duplicate Detection ──────────────────────
+DUPLICATE_SIMILARITY_THRESHOLD=0.92
+# Cosine similarity above this → images are near-duplicates.
+# 0.92 is tight enough to catch burst frames and near-
+# identical shots without merging visually distinct images.
+# Lowering this will over-merge; raising it will under-merge.
+
+DUPLICATE_BEST_FRAME_NIMA_WEIGHT=0.6
+DUPLICATE_BEST_FRAME_LAPLACIAN_WEIGHT=0.4
+# Weights for combined quality score within a duplicate group.
+# NIMA weighted higher because it captures overall composition
+# and exposure, not just sharpness.
+
+DUPLICATE_FACE_CONFIDENCE_BONUS=0.1
+# Added to combined score if MTCNN detects a face with
+# confidence > 0.95. Ensures face photos beat identical
+# non-face shots in the same group.
+
+DUPLICATE_FACE_BONUS_CONFIDENCE_FLOOR=0.95
+# MTCNN face detection confidence must exceed this to
+# qualify for the bonus. Keeps low-confidence detections
+# from unfairly boosting a frame's score.
+
+# ── Stage 3: Face Detection ────────────────────────────
+FACE_MIN_SIZE=40
+# Minimum face bounding box dimension in pixels (width and
+# height). Faces smaller than 40×40 are too low-resolution
+# for reliable ArcFace embedding. Do not raise this — it
+# will cause missed detections in crowd shots.
+
+MTCNN_THRESHOLDS=0.6,0.7,0.7
+# P-Net, R-Net, O-Net detection thresholds for MTCNN's
+# three-stage cascade. These are slightly lowered from the
+# default (0.6, 0.7, 0.7 vs 0.6, 0.7, 0.9) to improve
+# recall on partially occluded and angled faces.
+# Do not raise O-Net above 0.8 — it will miss real faces.
+
+MTCNN_KEEP_ALL=true
+# Detect all faces in the frame, not just the most confident.
+# Must be true — event photos often have multiple people.
+
+# ── Stage 3: Face Search ──────────────────────────────
+FACE_SEARCH_SIMILARITY_THRESHOLD=0.55
+# Cosine similarity above this → face is a match.
+# 0.55 is intentionally low to maximise recall (the critical
+# requirement). It will return some false positives but will
+# not miss genuine matches. Do not raise above 0.65 — you
+# will start missing the same person in different lighting.
+
+FACE_SEARCH_TOP_K=100
+# Number of nearest neighbours FAISS retrieves before
+# applying the similarity threshold filter. 100 gives enough
+# headroom to catch all genuine matches in large collections.
+# Do not lower this.
+
+# ── FAISS ─────────────────────────────────────────────
+FAISS_INDEX_TYPE=IVFFlat
+# IVFFlat gives exact distances (no quantisation error)
+# with faster search than a brute-force Flat index.
+# Do not use IVFPQ — product quantisation reduces embedding
+# precision and will degrade face search accuracy.
+
+FAISS_NLIST=100
+# Number of Voronoi cells in the IVF index. 100 is optimal
+# for collections up to ~100k vectors. Increase to 256
+# only if consistently working with 500k+ faces.
+
+FAISS_NPROBE=20
+# Number of cells searched at query time. Higher = more
+# accurate but slower. 20 out of 100 cells gives strong
+# recall without significant latency cost. Do not go below
+# 10 — recall drops noticeably.
+
+FAISS_INDEX_PATH=/app/indexes
+# Directory where per-event FAISS indexes are serialised.
+# Must be a mounted volume to survive container restarts.
+
+
+================================================================
+END OF CONTEXT FILE
+================================================================
