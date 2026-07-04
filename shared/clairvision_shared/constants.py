@@ -14,6 +14,10 @@ THUMBNAIL_SIZES = (400, 100)
 # Pillow decompression-bomb ceiling (~64 megapixels).
 MAX_IMAGE_PIXELS = 64_000_000
 
+# Images are downscaled to this longest edge before Laplacian scoring so
+# sharpness scores (and BLUR_LAPLACIAN_THRESHOLD) are resolution-independent.
+LAPLACIAN_REF_EDGE = 1024
+
 # Max selfie upload accepted by the face-search endpoint.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 

@@ -28,3 +28,6 @@ to add/edit.
 - [jit-heavy-imports-need-boot-warmup](lessons/jit-heavy-imports-need-boot-warmup.md) — numba JIT makes the first UMAP request cost ~70s; warm the import in a daemon thread at API boot.
 - [celery-prefork-multiplies-model-memory](lessons/celery-prefork-multiplies-model-memory.md) — default prefork spawned 8 children each loading all models; pin --concurrency=1, scale via containers.
 - [next-public-env-is-baked-at-build](lessons/next-public-env-is-baked-at-build.md) — NEXT_PUBLIC_* inlines at build; without Docker build args the frontend image ships in mock mode.
+- [laplacian-needs-resolution-normalization](lessons/laplacian-needs-resolution-normalization.md) — full-res DSLR photos scored 5–80 vs the 80 threshold (everything rejected); normalize to a 1024px edge, then recalibrate from data.
+- [exif-orientation-must-be-applied](lessons/exif-orientation-must-be-applied.md) — DSLR portraits arrive sideways without exif_transpose; silently kills face recall.
+- [verify-container-code-after-rebuild](lessons/verify-container-code-after-rebuild.md) — an exit-0 rebuild left the old image running; verify code inside the container, and preload failures now kill the worker instead of failing every task.

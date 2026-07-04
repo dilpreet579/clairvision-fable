@@ -63,9 +63,20 @@ def get_arcface():
 @worker_process_init.connect
 def preload_models(**_kwargs) -> None:
     """Eager-load everything at worker boot so the first task isn't slow and
-    a bad weights path fails loudly at startup, not mid-event."""
-    get_nima()
-    get_clip()
-    get_mtcnn()
-    get_arcface()
+    a bad weights file fails loudly at startup, not mid-event.
+
+    A raised exception here does NOT stop Celery — the worker would report
+    ready and then fail every single task. Exit hard instead: a worker that
+    cannot load its models must not consume tasks.
+    """
+    import os
+
+    try:
+        get_nima()
+        get_clip()
+        get_mtcnn()
+        get_arcface()
+    except Exception:
+        logger.critical("model preload failed — worker cannot run", exc_info=True)
+        os._exit(1)
     logger.info("All pipeline models loaded (device=%s)", _device())
