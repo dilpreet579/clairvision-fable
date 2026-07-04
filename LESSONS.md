@@ -23,3 +23,5 @@ to add/edit.
 - [smoke-test-fetch-paths-end-to-end](lessons/smoke-test-fetch-paths-end-to-end.md) — unit-green code still had a URL-joining bug only a real run caught.
 - [blur-threshold-vs-soft-focus](lessons/blur-threshold-vs-soft-focus.md) — Laplacian gate rejects artistic soft-focus portraits; accepted tradeoff, revisit with real event photos.
 - [dev-workflow-conventions](lessons/dev-workflow-conventions.md) — confirmed working agreements: venv for iteration + Docker as truth, commit per verified phase, SOURCE_FETCH_ALLOW_PRIVATE for local test sources.
+- [security-tests-need-prod-posture](lessons/security-tests-need-prod-posture.md) — the dev SSRF flag legitimately opens the gate being tested; security checks must run with dev flags off.
+- [compose-env-file-optional](lessons/compose-env-file-optional.md) — `env_file: .env` breaks every compose command on fresh clones; use the `required: false` long-form.
