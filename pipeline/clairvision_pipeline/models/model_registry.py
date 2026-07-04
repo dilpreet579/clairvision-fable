@@ -50,7 +50,14 @@ def get_mtcnn():
     return _registry["mtcnn"]
 
 
-# Stage 3 accessor (get_arcface) lands with its stage.
+def get_arcface():
+    if "arcface" not in _registry:
+        from .arcface_model import ArcFaceEmbedder
+
+        settings = get_settings()
+        logger.info("Loading ArcFace %s", settings.arcface_model)
+        _registry["arcface"] = ArcFaceEmbedder(settings.arcface_model, _device())
+    return _registry["arcface"]
 
 
 @worker_process_init.connect
@@ -60,4 +67,5 @@ def preload_models(**_kwargs) -> None:
     get_nima()
     get_clip()
     get_mtcnn()
+    get_arcface()
     logger.info("All pipeline models loaded (device=%s)", _device())

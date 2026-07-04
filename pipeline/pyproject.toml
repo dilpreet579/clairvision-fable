@@ -12,8 +12,12 @@ dependencies = [
     "torchvision>=0.17",
     "open_clip_torch>=2.24",
     "facenet-pytorch>=2.6",
+    "insightface>=0.7",
+    "onnxruntime>=1.17",
+    "faiss-cpu>=1.8",
 ]
-# Stage 3 adds: insightface + onnxruntime-gpu (ArcFace buffalo_l), faiss-gpu/cpu
+# GPU container may swap onnxruntime -> onnxruntime-gpu and faiss-cpu ->
+# faiss-gpu; the code paths are identical.
 
 [build-system]
 requires = ["setuptools>=68"]

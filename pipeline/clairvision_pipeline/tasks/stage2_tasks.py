@@ -190,14 +190,34 @@ def finalize_duplicate_groups(_results: list, event_id: str) -> None:
                         image.status = ImageStatus.STAGE2_NOT_SELECTED
             session.commit()
 
-        # TODO(Phase 4): kick off the Stage 3 chord (face detection + FAISS).
-        # Until Stage 3 exists, close the event out so Stage 2 is verifiable.
+        # Stage 2 → Stage 3 handoff.
+        from celery import chord
+
+        from .orchestration import pipeline_failed
+        from .stage3_tasks import build_face_index, detect_and_embed_faces
+
         with Session() as session:
             event = session.get(Event, uuid.UUID(event_id))
-            event.status = EventStatus.READY
-            event.selected_image_count = selected_total
+            event.current_stage = PipelineStage.STAGE3_FACES
+            selected_ids = [
+                str(row[0])
+                for row in session.query(Image.id).filter(
+                    Image.event_id == uuid.UUID(event_id),
+                    Image.status == ImageStatus.STAGE2_SELECTED,
+                )
+            ]
             session.commit()
-        logger.info("event %s: %d selected images", event_id, selected_total)
+
+        logger.info(
+            "event %s: %d selected images, starting stage 3",
+            event_id,
+            len(selected_ids),
+        )
+        header = [detect_and_embed_faces.s(image_id) for image_id in selected_ids]
+        callback = build_face_index.s(event_id).on_error(
+            pipeline_failed.s(event_id, PipelineStage.STAGE3_FACES.value)
+        )
+        chord(header)(callback)
 
     except Exception as exc:
         fail_event(
