@@ -11,13 +11,16 @@ dependencies = [
     "torch>=2.2",
     "torchvision>=0.17",
     "open_clip_torch>=2.24",
-    "facenet-pytorch>=2.6",
     "insightface>=0.7",
     "onnxruntime>=1.17",
     "faiss-cpu>=1.8",
+    "requests>=2.31",
 ]
-# GPU container may swap onnxruntime -> onnxruntime-gpu and faiss-cpu ->
-# faiss-gpu; the code paths are identical.
+# facenet-pytorch is deliberately NOT listed: it pins torch<2.3 and would
+# conflict at resolve time. Install it separately with --no-deps (its real
+# runtime needs are already covered above) — see lessons/facenet-pytorch-
+# needs-no-deps.md. GPU container may swap onnxruntime -> onnxruntime-gpu
+# and faiss-cpu -> faiss-gpu; the code paths are identical.
 
 [build-system]
 requires = ["setuptools>=68"]

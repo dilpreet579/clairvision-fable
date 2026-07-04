@@ -10,8 +10,9 @@ working torch install and can break the whole environment resolution. With
 are already present) MTCNN works correctly on modern torch; its weights ship inside
 the package, so no downloads either.
 
-**How to apply**: every environment that installs the pipeline — including
-`pipeline/Dockerfile`, which does NOT yet do this — must install facenet-pytorch
-with `--no-deps` plus an explicit `requests`. Revisit when facenet-pytorch relaxes
-its pin. (Open item: the Dockerfile currently installs via `pip install -e
-/app/pipeline`, which will hit the pin conflict at image build time.)
+**How to apply**: every environment that installs the pipeline must install
+facenet-pytorch with `--no-deps`. It is deliberately absent from
+`pipeline/pyproject.toml` dependencies (a comment there points here);
+`pipeline/Dockerfile` installs it as a separate `--no-deps` step, and `requests`
+(its one non-covered runtime need) is a regular pipeline dependency. Revisit when
+facenet-pytorch relaxes its torch pin.

@@ -17,7 +17,10 @@ RUN python3.11 -m pip install -e /app/shared
 
 COPY pipeline/pyproject.toml /app/pipeline/pyproject.toml
 COPY pipeline/clairvision_pipeline/ /app/pipeline/clairvision_pipeline/
-RUN python3.11 -m pip install -e /app/pipeline
+RUN python3.11 -m pip install -e /app/pipeline \
+    # facenet-pytorch pins torch<2.3; --no-deps avoids the conflict (its
+    # runtime needs are already installed by the pipeline package).
+    && python3.11 -m pip install --no-deps "facenet-pytorch>=2.6"
 
 # NIMA weights and FAISS indexes are volume-mounted at runtime:
 #   ./pipeline/weights -> /app/weights (ro), faiss_indexes -> /app/indexes

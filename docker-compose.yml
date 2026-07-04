@@ -37,7 +37,9 @@ services:
     build:
       context: .
       dockerfile: pipeline/Dockerfile
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       POSTGRES_HOST: db
     volumes:
@@ -55,6 +57,35 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      - faiss_indexes:/app/indexes:ro   # read-only: only the worker writes indexes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3000:3000"
 
 volumes:
   postgres_data:

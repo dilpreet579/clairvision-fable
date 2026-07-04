@@ -37,3 +37,13 @@ class DuplicateGroupMember(BaseModel):
     laplacian_score: float | None = None
     nima_score: float | None = None
     is_selected: bool = False
+
+
+class ImagePage(BaseModel):
+    """Gallery pagination envelope — shape must stay in sync with
+    frontend/lib/types.ts (the frontend was built against this contract)."""
+
+    items: list[ImageRead]
+    page: int
+    page_size: int
+    total: int

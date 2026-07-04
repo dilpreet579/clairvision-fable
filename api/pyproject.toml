@@ -1,0 +1,22 @@
+[project]
+name = "clairvision-api"
+version = "0.1.0"
+description = "ClairVision CPU-only web API: gallery, face search, image serving"
+requires-python = ">=3.11"
+dependencies = [
+    "clairvision-shared",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "redis>=5.0",
+    "celery[redis]>=5.3",
+]
+# Phase 7 (face search) adds: python-multipart, onnxruntime, faiss-cpu,
+# torch (CPU), facenet-pytorch (--no-deps; see lessons/).
+# Phase 9 (cluster) adds: umap-learn.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["clairvision_api*"]
