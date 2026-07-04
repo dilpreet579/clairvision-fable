@@ -31,7 +31,26 @@ def get_nima():
     return _registry["nima"]
 
 
-# Stage 2/3 accessors (get_clip, get_mtcnn, get_arcface) land with their stages.
+def get_clip():
+    if "clip" not in _registry:
+        from .clip_model import ClipEmbedder
+
+        settings = get_settings()
+        logger.info("Loading CLIP %s", settings.clip_model)
+        _registry["clip"] = ClipEmbedder(settings.clip_model, _device())
+    return _registry["clip"]
+
+
+def get_mtcnn():
+    if "mtcnn" not in _registry:
+        from .mtcnn_model import FaceDetector
+
+        logger.info("Loading MTCNN")
+        _registry["mtcnn"] = FaceDetector(_device())
+    return _registry["mtcnn"]
+
+
+# Stage 3 accessor (get_arcface) lands with its stage.
 
 
 @worker_process_init.connect
@@ -39,4 +58,6 @@ def preload_models(**_kwargs) -> None:
     """Eager-load everything at worker boot so the first task isn't slow and
     a bad weights path fails loudly at startup, not mid-event."""
     get_nima()
+    get_clip()
+    get_mtcnn()
     logger.info("All pipeline models loaded (device=%s)", _device())

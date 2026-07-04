@@ -11,6 +11,7 @@ celery_app = Celery(
     include=[
         "clairvision_pipeline.tasks.orchestration",
         "clairvision_pipeline.tasks.stage1_tasks",
+        "clairvision_pipeline.tasks.stage2_tasks",
     ],
 )
 

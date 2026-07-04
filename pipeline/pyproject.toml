@@ -10,8 +10,9 @@ dependencies = [
     "opencv-python-headless>=4.9",
     "torch>=2.2",
     "torchvision>=0.17",
+    "open_clip_torch>=2.24",
+    "facenet-pytorch>=2.6",
 ]
-# Stage 2 adds: open_clip_torch (CLIP ViT-L/14), facenet-pytorch (MTCNN)
 # Stage 3 adds: insightface + onnxruntime-gpu (ArcFace buffalo_l), faiss-gpu/cpu
 
 [build-system]

@@ -90,42 +90,47 @@ def _mark_failed(image_id: str, event_id: str, error_type: str, detail: str) -> 
 @celery_app.task(name="pipeline.stage1_complete")
 def stage1_complete(_results: list, event_id: str) -> None:
     """Stage 1 → Stage 2 boundary with explicit empty-set guards."""
+    from celery import chord
+
+    from .orchestration import pipeline_failed
+    from .stage2_tasks import embed_image_clip, finalize_duplicate_groups
+
     try:
         Session = get_sessionmaker()
         with Session() as session:
-            passed = (
-                session.query(Image.id)
-                .filter(
+            passed_ids = [
+                str(row[0])
+                for row in session.query(Image.id).filter(
                     Image.event_id == uuid.UUID(event_id),
                     Image.status == ImageStatus.STAGE1_PASSED,
                 )
-                .count()
-            )
+            ]
 
-        if passed == 0:
+        if not passed_ids:
             # All images rejected/failed is a valid outcome, not an error.
             with Session() as session:
                 event = session.get(Event, uuid.UUID(event_id))
                 event.status = EventStatus.READY
                 event.selected_image_count = 0
-                event.current_stage = PipelineStage.STAGE1_QUALITY
                 session.commit()
             logger.info("event %s: 0 images passed stage 1, marked ready", event_id)
             return
 
-        logger.info("event %s: %d images passed stage 1", event_id, passed)
-        # TODO(Phase 3): kick off the Stage 2 chord here (CLIP embed + dedup).
-        # Until Stage 2 exists, close the event out so Stage 1 is verifiable
-        # end-to-end: every passed image counts as selected.
+        logger.info(
+            "event %s: %d images passed stage 1, starting stage 2",
+            event_id,
+            len(passed_ids),
+        )
         with Session() as session:
-            session.query(Image).filter(
-                Image.event_id == uuid.UUID(event_id),
-                Image.status == ImageStatus.STAGE1_PASSED,
-            ).update({Image.status: ImageStatus.STAGE2_SELECTED})
             event = session.get(Event, uuid.UUID(event_id))
-            event.status = EventStatus.READY
-            event.selected_image_count = passed
+            event.current_stage = PipelineStage.STAGE2_DUPLICATES
             session.commit()
+
+        header = [embed_image_clip.s(image_id) for image_id in passed_ids]
+        callback = finalize_duplicate_groups.s(event_id).on_error(
+            pipeline_failed.s(event_id, PipelineStage.STAGE2_DUPLICATES.value)
+        )
+        chord(header)(callback)
 
     except Exception as exc:
         fail_event(
