@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     source_fetch_max_bytes: int = 52_428_800
     source_fetch_timeout_seconds: float = 30.0
     source_fetch_max_redirects: int = 3
+    # DEV ONLY: disables the private/loopback IP block-list so local test
+    # image servers work. Must stay false in any real deployment.
+    source_fetch_allow_private: bool = False
 
     @property
     def database_url(self) -> str:

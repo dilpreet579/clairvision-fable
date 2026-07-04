@@ -1,0 +1,22 @@
+[project]
+name = "clairvision-pipeline"
+version = "0.1.0"
+description = "ClairVision GPU pipeline worker: 3-stage ML curation via Celery"
+requires-python = ">=3.11"
+dependencies = [
+    "clairvision-shared",
+    "celery[redis]>=5.3",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9",
+    "torch>=2.2",
+    "torchvision>=0.17",
+]
+# Stage 2 adds: open_clip_torch (CLIP ViT-L/14), facenet-pytorch (MTCNN)
+# Stage 3 adds: insightface + onnxruntime-gpu (ArcFace buffalo_l), faiss-gpu/cpu
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["clairvision_pipeline*"]

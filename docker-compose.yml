@@ -30,5 +30,32 @@ services:
       timeout: 3s
       retries: 10
 
+  pipeline-worker:
+    # Requires the NVIDIA container runtime; opt in via:
+    #   docker compose --profile pipeline up -d pipeline-worker
+    profiles: ["pipeline"]
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      - faiss_indexes:/app/indexes
+      - ./pipeline/weights:/app/weights:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
 volumes:
   postgres_data:
+  faiss_indexes:

@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #161616;
+  --fg: #ececec;
+  --muted: #8b8b8b;
+  --accent: #8aa9c9; /* single muted blue, interactive elements only */
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Minimal animated dot — the only loading affordance allowed on ingestion. */
+@keyframes cv-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.cv-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--muted);
+  animation: cv-dot 1.1s ease-in-out infinite;
+}
+
+/* Skeleton pulse for gallery placeholders. */
+@keyframes cv-skeleton {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.cv-skeleton {
+  background: var(--surface);
+  animation: cv-skeleton 1.4s ease-in-out infinite;
+}

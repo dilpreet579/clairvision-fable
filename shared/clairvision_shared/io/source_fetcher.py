@@ -70,6 +70,8 @@ def validate_source_url(url: str) -> None:
         raise BlockedURLError(f"scheme {parts.scheme!r} not allowed")
     if not parts.hostname:
         raise BlockedURLError("URL has no host")
+    if get_settings().source_fetch_allow_private:
+        return  # DEV ONLY escape hatch; scheme/host checks above still apply
     try:
         ip = ipaddress.ip_address(parts.hostname)
     except ValueError:
@@ -83,13 +85,20 @@ def validate_source_url(url: str) -> None:
 def join_source_ref(source_url: str, source_ref: str) -> str:
     """Join a manifest entry against the event's source URL.
 
+    Refs resolve against the source URL's *directory* — if the source URL
+    points at a manifest file (e.g. .../manifest.json), refs are siblings
+    of that file, not children of it.
+
     A hostile manifest must not be able to redirect individual image
     fetches to a different host: absolute URLs, scheme-relative refs,
-    and path escapes above the source URL are all rejected.
+    and path escapes above the base directory are all rejected.
     """
     if "://" in source_ref or source_ref.startswith("//"):
         raise BlockedURLError(f"absolute source_ref rejected: {source_ref!r}")
-    base = source_url if source_url.endswith("/") else source_url + "/"
+    parts = urlsplit(source_url)
+    path = parts.path
+    dir_path = path if path.endswith("/") else path[: path.rfind("/") + 1] or "/"
+    base = f"{parts.scheme}://{parts.netloc}{dir_path}"
     joined = urljoin(base, source_ref)
     if not joined.startswith(base):
         raise BlockedURLError(f"source_ref escapes source URL: {source_ref!r}")
