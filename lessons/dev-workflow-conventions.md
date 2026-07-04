@@ -19,4 +19,6 @@ the venv) goes against what the owner chose.
   blocks private addresses by default. Never set it outside local dev.
 - **Parallelism**: pipeline/backend work stays inline (context-heavy, sequential);
   well-specified, decoupled chunks (frontend scaffold) go to background agents with
-  self-contained briefs.
+  self-contained briefs. Validated at integration: the mock-built frontend wired to
+  the live API with **zero frontend code changes** — because every contract the
+  agent assumed was documented at build time and the API was written to match.
