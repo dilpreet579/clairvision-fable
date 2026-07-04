@@ -25,3 +25,4 @@ to add/edit.
 - [dev-workflow-conventions](lessons/dev-workflow-conventions.md) — confirmed working agreements: venv for iteration + Docker as truth, commit per verified phase, SOURCE_FETCH_ALLOW_PRIVATE for local test sources.
 - [security-tests-need-prod-posture](lessons/security-tests-need-prod-posture.md) — the dev SSRF flag legitimately opens the gate being tested; security checks must run with dev flags off.
 - [compose-env-file-optional](lessons/compose-env-file-optional.md) — `env_file: .env` breaks every compose command on fresh clones; use the `required: false` long-form.
+- [jit-heavy-imports-need-boot-warmup](lessons/jit-heavy-imports-need-boot-warmup.md) — numba JIT makes the first UMAP request cost ~70s; warm the import in a daemon thread at API boot.
