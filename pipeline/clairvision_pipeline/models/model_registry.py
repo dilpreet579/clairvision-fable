@@ -43,7 +43,7 @@ def get_clip():
 
 def get_mtcnn():
     if "mtcnn" not in _registry:
-        from .mtcnn_model import FaceDetector
+        from clairvision_shared.ml.mtcnn import FaceDetector
 
         logger.info("Loading MTCNN")
         _registry["mtcnn"] = FaceDetector(_device())
@@ -52,7 +52,7 @@ def get_mtcnn():
 
 def get_arcface():
     if "arcface" not in _registry:
-        from .arcface_model import ArcFaceEmbedder
+        from clairvision_shared.ml.arcface import ArcFaceEmbedder
 
         settings = get_settings()
         logger.info("Loading ArcFace %s", settings.arcface_model)

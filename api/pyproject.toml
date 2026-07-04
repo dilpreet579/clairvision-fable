@@ -9,9 +9,16 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "redis>=5.0",
     "celery[redis]>=5.3",
+    "python-multipart>=0.0.9",
+    "numpy>=1.26",
+    "faiss-cpu>=1.8",
+    "onnxruntime>=1.17",
+    "torch>=2.2",
+    "opencv-python-headless>=4.9",
+    "requests>=2.31",
 ]
-# Phase 7 (face search) adds: python-multipart, onnxruntime, faiss-cpu,
-# torch (CPU), facenet-pytorch (--no-deps; see lessons/).
+# facenet-pytorch is deliberately NOT listed (torch<2.3 pin) — install
+# with --no-deps; see lessons/facenet-pytorch-needs-no-deps.md.
 # Phase 9 (cluster) adds: umap-learn.
 
 [build-system]

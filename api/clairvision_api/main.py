@@ -5,7 +5,7 @@ from sqlalchemy import text
 from clairvision_shared.config import get_settings
 
 from .deps import get_redis
-from .routers import events, gallery, images
+from .routers import events, gallery, images, search
 
 app = FastAPI(title="ClairVision API")
 
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(events.router)
 app.include_router(gallery.router)
 app.include_router(images.router)
+app.include_router(search.router)
 
 
 @app.get("/healthz")

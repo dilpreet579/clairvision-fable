@@ -22,5 +22,4 @@ to add/edit.
 - [celery-on-windows-dev](lessons/celery-on-windows-dev.md) — worker needs --pool=solo on Windows and a restart after any shared-code change.
 - [smoke-test-fetch-paths-end-to-end](lessons/smoke-test-fetch-paths-end-to-end.md) — unit-green code still had a URL-joining bug only a real run caught.
 - [blur-threshold-vs-soft-focus](lessons/blur-threshold-vs-soft-focus.md) — Laplacian gate rejects artistic soft-focus portraits; accepted tradeoff, revisit with real event photos.
-- [frontend-contract-assumptions](lessons/frontend-contract-assumptions.md) — the mock frontend assumed a pagination envelope the API must honor (or renegotiate) in Phase 5.
 - [dev-workflow-conventions](lessons/dev-workflow-conventions.md) — confirmed working agreements: venv for iteration + Docker as truth, commit per verified phase, SOURCE_FETCH_ALLOW_PRIVATE for local test sources.

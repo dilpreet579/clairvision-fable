@@ -24,7 +24,7 @@ from clairvision_shared.constants import FACE_EMBEDDING_DIM
 from clairvision_shared.db.models import FaceEmbedding
 from clairvision_shared.db.session import get_sessionmaker
 
-from .paths import event_index_dir, faces_index_path
+from clairvision_shared.faiss_paths import event_index_dir, faces_index_path
 
 logger = logging.getLogger(__name__)
 

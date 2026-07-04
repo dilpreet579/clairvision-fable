@@ -28,7 +28,7 @@ from .. import errors
 from ..celery_app import celery_app
 from ..faiss_index.builder import build_and_publish_face_index
 from ..models.model_registry import get_arcface, get_mtcnn
-from ..stages.stage3_faces import norm_crop
+from clairvision_shared.ml.align import norm_crop
 from .db_helpers import fail_event, record_task_error
 
 logger = logging.getLogger(__name__)
