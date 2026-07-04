@@ -1,14 +1,15 @@
 """NIMA (Neural Image Assessment) — learned aesthetic/technical quality, 0-10.
 
-MobileNetV2 backbone + 10-way softmax head over score buckets 1..10;
-the scalar score is the distribution's expected value. Pretrained weights
-are loaded from NIMA_WEIGHTS_PATH (see pipeline/weights/README.md for the
-expected checkpoint format).
+VGG16 conv backbone -> global average pool -> 10-way softmax over score
+buckets 1..10; the scalar score is the distribution's expected value
+(Talebi & Milanfar, 2018). Weights: the AVA-trained VGG16 checkpoint from
+pyiqa (chaofengc/IQA-PyTorch-Weights, NIMA_VGG16_ava), converted to this
+module's layout by convert_pyiqa_checkpoint — see weights/README.md.
 """
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
-from torchvision.models import mobilenet_v2
+from torchvision.models import vgg16
 
 from clairvision_shared.io.image_utils import PILImage
 
@@ -16,12 +17,11 @@ from clairvision_shared.io.image_utils import PILImage
 class NIMA(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        base = mobilenet_v2(weights=None)
-        self.features = base.features
+        self.features = vgg16(weights=None).features
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Sequential(
             nn.Dropout(0.75),
-            nn.Linear(base.last_channel, 10),
+            nn.Linear(512, 10),
             nn.Softmax(dim=1),
         )
 
@@ -29,6 +29,29 @@ class NIMA(nn.Module):
         x = self.features(x)
         x = self.pool(x).flatten(1)
         return self.classifier(x)
+
+
+def convert_pyiqa_checkpoint(src_path: str, dst_path: str) -> None:
+    """Remap a pyiqa NIMA_VGG16_ava checkpoint into this module's layout.
+
+    pyiqa names conv layers base_model.features_N (underscore); torchvision
+    uses features.N (dot). pyiqa's head is classifier.2 (indices 0-1 are
+    parameterless); ours is classifier.1. Result loads with strict=True.
+    """
+    ckpt = torch.load(src_path, map_location="cpu", weights_only=True)
+    if isinstance(ckpt, dict) and "params" in ckpt:
+        ckpt = ckpt["params"]
+    remapped = {}
+    for key, value in ckpt.items():
+        if key.startswith("base_model.features_"):
+            layer = key.removeprefix("base_model.features_")  # "N.weight"
+            remapped[f"features.{layer}"] = value
+        elif key.startswith("classifier.2."):
+            remapped[key.replace("classifier.2.", "classifier.1.")] = value
+        else:
+            raise ValueError(f"unexpected checkpoint key: {key}")
+    NIMA().load_state_dict(remapped, strict=True)  # validate before writing
+    torch.save(remapped, dst_path)
 
 
 class NimaScorer:
