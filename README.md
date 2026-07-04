@@ -18,34 +18,43 @@ search accelerators).
 
 ## Status
 
-Phase 1 (foundation) complete: shared package, database schema, Docker Compose
-(db + redis). Pipeline stages, API, and frontend land in subsequent phases —
-see the build order in the project spec (`clairvisionProject.txt`).
+All spec features implemented and verified: 3-stage ML pipeline, gallery with
+duplicate-group override, face search (selfie upload + click-a-face), cluster
+visualization, and the full containerized stack.
 
 ## Setup
 
-Prerequisites: Docker + Docker Compose; Python 3.11 (for running migrations locally);
-NVIDIA container runtime (for the pipeline worker, from Phase 2 onward).
+Prerequisites: Docker + Docker Compose; Python 3.11 (for running migrations from the
+host); NVIDIA container runtime only if using the GPU worker.
 
 ```bash
 # 1. Configure environment (values are pre-tuned for accuracy — don't change
 #    thresholds unless you know why; each has an explanatory comment)
 cp .env.example .env
 
-# 2. Start infrastructure
-docker compose up -d db redis
+# 2. Build and start the stack
+#    With an NVIDIA GPU:
+docker compose --profile pipeline up -d --build
+#    Without a GPU (dev/CI — same code, models fall back to CPU, slower):
+docker compose --profile pipeline-cpu up -d --build
 
-# 3. Install the shared package + run migrations
+# 3. Run migrations (from the host, against the containerized Postgres)
 pip install -e shared
-alembic upgrade head
+POSTGRES_HOST=localhost alembic upgrade head
 ```
+
+Frontend: http://localhost:3000 · API: http://localhost:8000 (both localhost-bound).
+First worker boot downloads model weights (~2 GB, cached in a named volume);
+NIMA weights must be placed at `pipeline/weights/nima.pth` (see
+`pipeline/weights/README.md`).
 
 ## Triggering a pipeline run
 
-(From Phase 2 onward.) Submit an event via the API — `POST /events` with
-`{"name": "...", "source_url": "https://..."}` — or through the web UI's ingestion form.
-Pipeline status progresses `pending → processing → ready` (or `failed` with an error
-message). The gallery becomes accessible once ready.
+Submit an event via the ingestion form at http://localhost:3000/events, or
+`POST /events` with `{"name": "...", "source_url": "https://..."}`. The source URL
+may be a JSON manifest (array of image refs, or `{"images": [...]}`) or an HTML
+directory index. Pipeline status progresses `pending → processing → ready` (or
+`failed` with an error message). The gallery becomes accessible once ready.
 
 ## Repository layout
 

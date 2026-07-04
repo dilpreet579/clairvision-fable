@@ -25,5 +25,8 @@ RUN python3.11 -m pip install -e /app/pipeline \
 # NIMA weights and FAISS indexes are volume-mounted at runtime:
 #   ./pipeline/weights -> /app/weights (ro), faiss_indexes -> /app/indexes
 
+# concurrency=1: every prefork child loads its OWN copy of all models
+# into VRAM/RAM; one process per GPU. Scale via multiple containers, not
+# pool children.
 CMD ["python3.11", "-m", "celery", "-A", "clairvision_pipeline.celery_app", \
-     "worker", "--loglevel=info", "-Q", "celery"]
+     "worker", "--loglevel=info", "-Q", "celery", "--concurrency=1"]

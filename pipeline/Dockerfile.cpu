@@ -1,0 +1,31 @@
+# CPU-only pipeline worker — for machines without an NVIDIA GPU (dev,
+# CI, full-stack regression). Same code as pipeline/Dockerfile; only the
+# base image and torch wheels differ. Slow per image, functionally
+# identical: every model falls back to CPU automatically.
+# Build context = repo root (so shared/ can be copied).
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY shared/ /app/shared/
+RUN pip install -e /app/shared
+
+COPY pipeline/pyproject.toml /app/pipeline/pyproject.toml
+COPY pipeline/clairvision_pipeline/ /app/pipeline/clairvision_pipeline/
+# torch first from the CPU index (see api/Dockerfile note), then the
+# package, then facenet-pytorch --no-deps (torch<2.3 pin conflict).
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install -e /app/pipeline \
+    && pip install --no-deps "facenet-pytorch>=2.6"
+
+# concurrency=1: every prefork child loads its OWN copy of all models
+# (~4GB+ each); the default (nproc children) multiplies that by core count.
+CMD ["python", "-m", "celery", "-A", "clairvision_pipeline.celery_app", \
+     "worker", "--loglevel=info", "-Q", "celery", "--concurrency=1"]

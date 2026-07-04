@@ -58,6 +58,30 @@ services:
               count: 1
               capabilities: [gpu]
 
+  pipeline-worker-cpu:
+    # GPU-less variant for dev machines / CI / full-stack regression:
+    #   docker compose --profile pipeline-cpu up -d pipeline-worker-cpu
+    # Functionally identical (models fall back to CPU); slow per image.
+    profiles: ["pipeline-cpu"]
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile.cpu
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      - faiss_indexes:/app/indexes
+      - ./pipeline/weights:/app/weights:ro
+      - model_cache:/root/.cache          # CLIP weights (~1.7GB), downloaded once
+      - insightface_models:/root/.insightface   # buffalo_l pack (~275MB)
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -80,8 +104,11 @@ services:
   frontend:
     build:
       context: ./frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      args:
+        # Inlined at build time; the browser calls the API via the
+        # host-published port, so localhost is correct here.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_USE_MOCKS: "false"
     depends_on:
       - api
     ports:
@@ -90,3 +117,5 @@ services:
 volumes:
   postgres_data:
   faiss_indexes:
+  model_cache:
+  insightface_models:

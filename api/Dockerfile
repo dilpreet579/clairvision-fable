@@ -11,10 +11,12 @@ RUN pip install -e /app/shared
 
 COPY api/pyproject.toml /app/api/pyproject.toml
 COPY api/clairvision_api/ /app/api/clairvision_api/
-# CPU torch wheel index — this container is CPU-only by design; the
-# default PyPI torch would pull multi-GB CUDA libraries for nothing.
-RUN pip install -e /app/api \
-        --extra-index-url https://download.pytorch.org/whl/cpu \
+# Pre-install torch from the CPU wheel index (this container is CPU-only
+# by design). Done FIRST and pinned to the cpu index: with a mere
+# --extra-index-url, pip can resolve torch from PyPI instead, pulling
+# multi-GB CUDA libraries for nothing.
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install -e /app/api \
     # facenet-pytorch pins torch<2.3; --no-deps avoids the conflict.
     && pip install --no-deps "facenet-pytorch>=2.6"
 
