@@ -1,8 +1,10 @@
+from .cluster import ClusterPoint
 from .event import EventCreate, EventRead
 from .face import FaceRead, SearchResult
 from .image import DuplicateGroupRead, DuplicateGroupSummary, ImageRead
 
 __all__ = [
+    "ClusterPoint",
     "EventCreate",
     "EventRead",
     "FaceRead",

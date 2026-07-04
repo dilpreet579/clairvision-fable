@@ -3,6 +3,7 @@
 // (duplicate swaps, event ingestion progress) behave like a real API.
 
 import type {
+  ClusterPoint,
   DuplicateGroupMember,
   DuplicateGroupRead,
   EventCreate,
@@ -369,6 +370,60 @@ export async function mockSearchByFace(
 ): Promise<SearchResult[]> {
   await latency(350);
   return buildResults(eventId, hashString(faceId));
+}
+
+// --- cluster ----------------------------------------------------------------
+
+/**
+ * Deterministic 2D "UMAP" projection: gallery images arranged in 8 gaussian
+ * blobs. Duplicate-group members land tightly inside one blob; singles
+ * scatter more loosely. Coordinates are raw (arbitrary range, can be
+ * negative) to exercise the canvas auto-fit.
+ */
+export async function mockGetClusterPoints(
+  eventId: string,
+): Promise<ClusterPoint[]> {
+  await latency(300);
+  const state = buildGallery(eventId);
+  const rand = mulberry32(hashString(eventId) ^ 0x9e3779b9);
+  const gauss = () => {
+    const u = Math.max(rand(), 1e-9);
+    const v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  const BLOB_COUNT = 8;
+  const centers = Array.from({ length: BLOB_COUNT }, () => ({
+    x: (rand() - 0.5) * 90,
+    y: (rand() - 0.5) * 70,
+  }));
+
+  const groupBlob = new Map<string, number>();
+  let nextBlob = 0;
+
+  return state.gallery.map((img, i) => {
+    let blobIndex: number;
+    let sigma: number;
+    const groupId = img.duplicate_group?.id ?? null;
+    if (groupId) {
+      if (!groupBlob.has(groupId)) {
+        groupBlob.set(groupId, nextBlob % BLOB_COUNT);
+        nextBlob += 1;
+      }
+      blobIndex = groupBlob.get(groupId)!;
+      sigma = 1.6; // near-duplicates sit close together
+    } else {
+      blobIndex = i % BLOB_COUNT;
+      sigma = 7;
+    }
+    const center = centers[blobIndex];
+    return {
+      image_id: img.id,
+      x: center.x + gauss() * sigma,
+      y: center.y + gauss() * sigma,
+      duplicate_group_id: groupId,
+    };
+  });
 }
 
 // --- placeholder imagery ------------------------------------------------------

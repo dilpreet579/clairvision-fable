@@ -7,6 +7,16 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "frontend",
       "port": 3000
+    },
+    {
+      "name": "frontend-mock",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set NEXT_PUBLIC_USE_MOCKS=true&& npm run dev"
+      ],
+      "cwd": "frontend",
+      "port": 3000
     }
   ]
 }

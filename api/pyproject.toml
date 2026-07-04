@@ -16,10 +16,10 @@ dependencies = [
     "torch>=2.2",
     "opencv-python-headless>=4.9",
     "requests>=2.31",
+    "umap-learn>=0.5",
 ]
 # facenet-pytorch is deliberately NOT listed (torch<2.3 pin) — install
 # with --no-deps; see lessons/facenet-pytorch-needs-no-deps.md.
-# Phase 9 (cluster) adds: umap-learn.
 
 [build-system]
 requires = ["setuptools>=68"]
