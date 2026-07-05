@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from clairvision_shared.constants import THUMBNAIL_SIZES
+from clairvision_shared.db.models import Event
 
+from ..auth_deps import require_published_or_organizer
 from ..deps import get_db, get_redis
 from ..services import image_cache_service as cache
 
@@ -25,19 +27,19 @@ def _serve(fn, *args) -> Response:
 
 @router.get("/full")
 def get_full_image(
-    event_id: uuid.UUID,
     image_id: uuid.UUID,
+    event: Event = Depends(require_published_or_organizer),
     db: Session = Depends(get_db),
     r: redis.Redis = Depends(get_redis),
 ) -> Response:
-    return _serve(cache.get_original, db, r, event_id, image_id)
+    return _serve(cache.get_original, db, r, event.id, image_id)
 
 
 @router.get("/thumbnail")
 def get_thumbnail(
-    event_id: uuid.UUID,
     image_id: uuid.UUID,
     size: int = Query(...),
+    event: Event = Depends(require_published_or_organizer),
     db: Session = Depends(get_db),
     r: redis.Redis = Depends(get_redis),
 ) -> Response:
@@ -47,4 +49,4 @@ def get_thumbnail(
         raise HTTPException(
             status_code=422, detail=f"size must be one of {list(THUMBNAIL_SIZES)}"
         )
-    return _serve(cache.get_thumbnail, db, r, event_id, image_id, size)
+    return _serve(cache.get_thumbnail, db, r, event.id, image_id, size)

@@ -84,9 +84,14 @@ def search_by_embedding(
         db.query(FaceEmbedding.faiss_seq_id, Face.id, Image.id, Image.width, Image.height)
         .join(Face, Face.id == FaceEmbedding.face_id)
         .join(Image, Image.id == Face.image_id)
+        # Hidden faces stay IN the FAISS index (hiding never mutates
+        # embeddings/indexes) — they are filtered out here at result
+        # assembly, for viewers and organizers alike. Organizers review
+        # hidden photos via the gallery's show_hidden toggle, not search.
         .filter(
             FaceEmbedding.event_id == event_id,
             FaceEmbedding.faiss_seq_id.in_(hits.keys()),
+            Image.hidden == False,  # noqa: E712
         )
         .all()
     )

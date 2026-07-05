@@ -1,12 +1,11 @@
-import uuid
-
 import redis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from clairvision_shared.db.models import Event
 from clairvision_shared.schemas import ClusterPoint
 
+from ..auth_deps import require_published_or_organizer
 from ..deps import get_db, get_redis
 from ..services.umap_service import get_cluster_points
 
@@ -17,10 +16,8 @@ router = APIRouter(prefix="/events/{event_id}", tags=["cluster"])
 # not on the event loop.
 @router.get("/cluster", response_model=list[ClusterPoint])
 def get_cluster(
-    event_id: uuid.UUID,
+    event: Event = Depends(require_published_or_organizer),
     db: Session = Depends(get_db),
     r: redis.Redis = Depends(get_redis),
 ) -> list[ClusterPoint]:
-    if db.get(Event, event_id) is None:
-        raise HTTPException(status_code=404, detail="event not found")
-    return get_cluster_points(db, r, event_id)
+    return get_cluster_points(db, r, event.id)

@@ -6,11 +6,14 @@ instant, real revocation, at the cost of one indexed PK lookup per
 authenticated request — negligible at this team's scale. See
 LESSONS/plan for why this beats a self-contained JWT here.
 """
+import uuid
+
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from clairvision_shared.config import get_settings
+from clairvision_shared.db.enums import EventVisibility
 from clairvision_shared.db.models import Event, Organizer, OrganizerSession
 
 from .deps import get_db
@@ -48,16 +51,14 @@ def require_organizer(
 
 
 def require_published_or_organizer(
-    event_id,
+    event_id: uuid.UUID,
     db: Session = Depends(get_db),
     organizer: Organizer | None = Depends(get_current_organizer_optional),
 ) -> Event:
     """The core rule for every viewer-facing endpoint: 404 (not 403) for
     unpublished/archived events unless the requester is an authenticated
     organizer previewing it — never reveal that an unpublished event
-    exists to an anonymous prober. Wired into routers in Phase C."""
-    from clairvision_shared.db.enums import EventVisibility
-
+    exists to an anonymous prober."""
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="event not found")

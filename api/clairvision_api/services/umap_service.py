@@ -55,7 +55,17 @@ def get_cluster_points(
     rows = (
         db.query(Image.id, Image.duplicate_group_id, ClipEmbedding.embedding)
         .join(ClipEmbedding, ClipEmbedding.image_id == Image.id)
-        .filter(Image.event_id == event_id, Image.status.in_(_GALLERY_STATUSES))
+        # Hidden images are excluded for everyone (viewers AND organizer
+        # preview): hiding removes a photo from viewer-facing surfaces, and
+        # organizers review hidden photos via the gallery's show_hidden
+        # toggle, not the cluster map. Always-excluding also keeps the
+        # Redis cache single-variant: the key's embedded count changes on
+        # hide/unhide, so stale projections are never served.
+        .filter(
+            Image.event_id == event_id,
+            Image.status.in_(_GALLERY_STATUSES),
+            Image.hidden == False,  # noqa: E712
+        )
         .order_by(Image.id)
         .all()
     )

@@ -18,6 +18,7 @@ class ImageRead(BaseModel):
     width: int | None = None
     height: int | None = None
     face_count: int
+    hidden: bool = False
     duplicate_group: DuplicateGroupSummary | None = None
 
 
