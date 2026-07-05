@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     # junk detections never reach ArcFace/FAISS. Raise toward 0.95 for stricter
     # curation, lower toward 0.85 to favour recall of profile/backlit faces.
     face_min_confidence: float = 0.90
+    # Geometric guard for high-confidence false positives the confidence gate
+    # can't catch: MTCNN gets genuinely confident (~0.94) that a hand/knuckle
+    # pattern is a face, but an upright face box is always taller than wide.
+    # Reject any box whose width/height exceeds this. Real faces cap near 0.95
+    # in practice; 1.0 ("wider than tall") sits in the gap. Raise to disable
+    # (e.g. 99) if a deployment expects strongly rolled/tilted faces.
+    face_max_aspect_ratio: float = 1.0
 
     # ── Stage 3: face search ──
     face_search_similarity_threshold: float = 0.55

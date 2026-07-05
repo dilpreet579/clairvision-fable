@@ -47,7 +47,8 @@ class FaceDetector:
         The 40x40 floor is applied here (not raised elsewhere) — smaller
         faces are too low-resolution for reliable ArcFace identity. The
         confidence floor drops marginal detections (reflections, edge
-        fragments) that clear MTCNN's permissive O-Net threshold.
+        fragments) that clear MTCNN's permissive O-Net threshold; the aspect
+        guard drops high-confidence non-faces (hands) that are wider than tall.
         """
         settings = get_settings()
         boxes, probs, points = self.mtcnn.detect(img, landmarks=True)
@@ -60,6 +61,8 @@ class FaceDetector:
             x1, y1, x2, y2 = (float(v) for v in box)
             w, h = x2 - x1, y2 - y1
             if w < settings.face_min_size or h < settings.face_min_size:
+                continue
+            if h <= 0 or w / h > settings.face_max_aspect_ratio:
                 continue
             dets.append(
                 FaceDet(

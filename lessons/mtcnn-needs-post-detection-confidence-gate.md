@@ -20,7 +20,18 @@ it removes the obvious junk while preserving the sparse 0.90–0.98 band of
 genuine-but-imperfect faces. Env-tunable — raise toward 0.95 for stricter
 curation, lower toward 0.85 for recall of profile/backlit faces.
 
-**Retroactive note:** the gate only applies at detection time. Events processed
+**Confidence isn't enough — add a geometric guard.** MTCNN also gets
+*genuinely* confident (0.94) that a hand/knuckle pattern is a face; a higher
+confidence gate can't remove it without deleting real faces in the same band.
+But an upright face box is always taller than wide: across 203 real faces the
+aspect (w/h) capped at 0.95, while the two hand-type false positives were the
+only boxes >1.0 (1.02 and 1.06). So `face_max_aspect_ratio` (default 1.0) drops
+"wider than tall" boxes with zero collateral. Layer both: confidence gate for
+low-score junk (reflections), aspect guard for high-score non-faces (hands).
+The real fix for both is a stronger detector (insightface SCRFD from the already-
+mounted buffalo_l pack) — deferred as too heavy for a targeted correction.
+
+**Retroactive note:** the gates only apply at detection time. Events processed
 before it need a prune, not a reprocess: `DELETE FROM faces WHERE
 detection_confidence < <threshold>` (face_embeddings cascade via FK), recompute
 the denormalized `images.face_count`, then rebuild the affected event's FAISS
