@@ -13,6 +13,7 @@ celery_app = Celery(
         "clairvision_pipeline.tasks.stage1_tasks",
         "clairvision_pipeline.tasks.stage2_tasks",
         "clairvision_pipeline.tasks.stage3_tasks",
+        "clairvision_pipeline.tasks.maintenance_tasks",
     ],
 )
 

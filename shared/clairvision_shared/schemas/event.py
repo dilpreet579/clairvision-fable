@@ -11,6 +11,14 @@ class EventCreate(BaseModel):
     source_url: str = Field(min_length=1, max_length=2000)
 
 
+class EventUpdate(BaseModel):
+    """Rename and/or explicit slug edit. name-only never silently reslugs
+    (would break a previously shared public link)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    slug: str | None = Field(default=None, min_length=1, max_length=200)
+
+
 class EventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

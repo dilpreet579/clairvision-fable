@@ -150,6 +150,48 @@ def select_group_image(
     return get_duplicate_group(group_id, event, db)
 
 
+def _set_hidden(
+    event_id: uuid.UUID, image_id: uuid.UUID, db: Session, hidden: bool
+) -> ImageRead:
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="event not found")
+    image = db.get(Image, image_id)
+    if image is None or image.event_id != event.id:
+        raise HTTPException(status_code=404, detail="image not found")
+    if image.hidden != hidden:
+        image.hidden = hidden
+        db.commit()
+    group = (
+        db.get(DuplicateGroup, image.duplicate_group_id)
+        if image.duplicate_group_id is not None
+        else None
+    )
+    return _image_read(image, group)
+
+
+@router.patch("/images/{image_id}/hide", response_model=ImageRead)
+def hide_image(
+    event_id: uuid.UUID,
+    image_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _organizer: Organizer = Depends(require_organizer),
+) -> ImageRead:
+    """Display-layer curation only — never touches FAISS/embeddings, so
+    it's instantly reversible via unhide."""
+    return _set_hidden(event_id, image_id, db, hidden=True)
+
+
+@router.patch("/images/{image_id}/unhide", response_model=ImageRead)
+def unhide_image(
+    event_id: uuid.UUID,
+    image_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _organizer: Organizer = Depends(require_organizer),
+) -> ImageRead:
+    return _set_hidden(event_id, image_id, db, hidden=False)
+
+
 @router.get("/images/{image_id}/faces", response_model=list[FaceRead])
 def list_image_faces(
     image_id: uuid.UUID,

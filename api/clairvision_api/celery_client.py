@@ -14,3 +14,9 @@ def _client() -> Celery:
 
 def enqueue_orchestrate_event(event_id: str) -> None:
     _client().send_task("pipeline.orchestrate_event", args=[event_id])
+
+
+def enqueue_delete_event_index(event_id: str) -> None:
+    """FAISS-directory cleanup runs on the worker (read-write mount); the
+    API can only enqueue it."""
+    _client().send_task("pipeline.delete_event_index", args=[event_id])

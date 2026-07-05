@@ -70,6 +70,20 @@ def get_original(
     return _fetch_and_cache_original(db, r, event_id, image_id)
 
 
+def purge_event_cache(r: redis.Redis, event_id: uuid.UUID) -> int:
+    """Delete every cached image byte-string AND cluster projection for an
+    event (used on event delete). scan_iter, not blocking KEYS. Returns the
+    number of keys removed."""
+    removed = 0
+    pipe = r.pipeline()
+    for pattern in (f"img:{event_id}:*", f"cluster:{event_id}:*"):
+        for key in r.scan_iter(match=pattern, count=500):
+            pipe.delete(key)
+            removed += 1
+    pipe.execute()
+    return removed
+
+
 def get_thumbnail(
     db: Session, r: redis.Redis, event_id: uuid.UUID, image_id: uuid.UUID, size: int
 ) -> bytes:
