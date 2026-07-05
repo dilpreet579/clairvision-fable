@@ -43,13 +43,16 @@ export default function SelfieUploadZone({
         dragging ? "border-accent" : "border-muted/50 hover:border-muted"
       }`}
     >
-      <p className="text-sm text-muted">
-        Drop a selfie here, or click to choose a photo of yourself.
+      <p className="px-4 text-center text-sm text-muted">
+        Drop a selfie here, or tap to choose a photo of yourself.
       </p>
+      {/* capture="user" jumps straight to the front camera on mobile;
+          desktop browsers ignore it and open the normal file picker. */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
+        capture="user"
         className="hidden"
         onChange={(e) => {
           handleFiles(e.target.files);

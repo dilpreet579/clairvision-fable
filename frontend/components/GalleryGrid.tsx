@@ -126,7 +126,12 @@ export default function GalleryGrid({
               image={image}
               searchPath={searchPath}
               onToggleDuplicates={handleToggleDuplicates}
-              duplicatesOpen={expandedGroup?.groupId === image.duplicate_group?.id}
+              // Guard the null case: undefined === undefined would mark
+              // every ungrouped image as "open" and pin its overlay on.
+              duplicatesOpen={
+                expandedGroup !== null &&
+                image.duplicate_group?.id === expandedGroup.groupId
+              }
             />
             {/* inline row expansion, plain DOM flow below the clicked image */}
             {expandedGroup !== null &&

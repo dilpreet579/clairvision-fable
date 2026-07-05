@@ -7,7 +7,17 @@ import { thumbnailUrl } from "@/lib/api-client";
 import type { ClusterPoint } from "@/lib/types";
 
 const PICK_RADIUS_PX = 9;
+// Fingertips are far less precise than a mouse cursor — roughly double
+// the hit radius when the primary pointer is coarse (touch devices).
+const PICK_RADIUS_COARSE_PX = 20;
 const SINGLE_COLOR = 0x5f5f5f; // neutral muted gray for images with no group
+
+function pickRadiusPx(): number {
+  return typeof window !== "undefined" &&
+    window.matchMedia("(pointer: coarse)").matches
+    ? PICK_RADIUS_COARSE_PX
+    : PICK_RADIUS_PX;
+}
 
 function hashString(s: string): number {
   let h = 2166136261;
@@ -158,7 +168,7 @@ export default function ClusterCanvas({
 
     function pickAt(mx: number, my: number): Pick | null {
       let best: Pick | null = null;
-      let bestDist = PICK_RADIUS_PX;
+      let bestDist = pickRadiusPx();
       for (const p of points) {
         const { sx, sy } = project(p);
         const d = Math.hypot(sx - mx, sy - my);
