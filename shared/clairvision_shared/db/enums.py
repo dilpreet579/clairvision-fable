@@ -27,3 +27,19 @@ class ImageStatus(str, enum.Enum):
     STAGE2_SELECTED = "stage2_selected"
     STAGE2_NOT_SELECTED = "stage2_not_selected"
     FAILED = "failed"
+
+
+class EventVisibility(str, enum.Enum):
+    """Organizer-controlled publication state — deliberately independent of
+    EventStatus (pipeline progress). An event can be status=ready,
+    visibility=draft (processed, awaiting organizer review) for a long time;
+    publishing requires status=READY at the application layer, not the DB."""
+
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"
+
+
+class AuthTokenPurpose(str, enum.Enum):
+    INVITE = "invite"
+    PASSWORD_RESET = "password_reset"

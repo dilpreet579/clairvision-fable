@@ -68,6 +68,21 @@ class Settings(BaseSettings):
     # image servers work. Must stay false in any real deployment.
     source_fetch_allow_private: bool = False
 
+    # ── Auth (organizer sessions, invite/reset tokens) ──
+    session_cookie_name: str = "cv_session"
+    session_ttl_seconds: int = 60 * 60 * 24 * 14
+    invite_token_ttl_seconds: int = 60 * 60 * 24 * 7
+    password_reset_token_ttl_seconds: int = 60 * 60
+    # False only for local http:// dev; must be true wherever the app is
+    # reachable over anything but localhost.
+    cookie_secure: bool = True
+    # Frontend base URL, used to build invite/reset links embedded in emails.
+    public_app_url: str = "http://localhost:3000"
+
+    # ── Resend (transactional email) ──
+    resend_api_key: str = ""
+    resend_from_address: str = "ClairVision <noreply@example.com>"
+
     @property
     def database_url(self) -> str:
         return (

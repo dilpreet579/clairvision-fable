@@ -9,6 +9,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Enum,
     Float,
@@ -23,7 +24,13 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from ..constants import CLIP_EMBEDDING_DIM, FACE_EMBEDDING_DIM
-from .enums import EventStatus, ImageStatus, PipelineStage
+from .enums import (
+    AuthTokenPurpose,
+    EventStatus,
+    EventVisibility,
+    ImageStatus,
+    PipelineStage,
+)
 
 
 def _pg_enum(py_enum, name: str) -> Enum:
@@ -68,6 +75,16 @@ class Event(TimestampMixin, Base):
     error_message: Mapped[str | None] = mapped_column(Text)
     total_image_count: Mapped[int | None] = mapped_column(Integer)
     selected_image_count: Mapped[int | None] = mapped_column(Integer)
+
+    # Organizer-controlled publication state — independent of `status` above
+    # (pipeline progress). See EventVisibility docstring.
+    slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    visibility: Mapped[EventVisibility] = mapped_column(
+        _pg_enum(EventVisibility, "event_visibility"),
+        nullable=False,
+        default=EventVisibility.DRAFT,
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     images: Mapped[list["Image"]] = relationship(
         back_populates="event", cascade="all, delete-orphan", passive_deletes=True
@@ -128,6 +145,11 @@ class Image(TimestampMixin, Base):
     )
     duplicate_score: Mapped[float | None] = mapped_column(Float)
     face_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Organizer-controlled, fully reversible display-layer exclusion.
+    # Independent of `status` (pipeline-driven) — never touches FAISS/embeddings.
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     event: Mapped["Event"] = relationship(back_populates="images")
     duplicate_group: Mapped["DuplicateGroup | None"] = relationship(
@@ -237,3 +259,67 @@ class PipelineTaskError(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class Organizer(TimestampMixin, Base):
+    """A user who can create/manage events. Shared team access — every
+    organizer has identical permissions, so there is no role column."""
+
+    __tablename__ = "organizers"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    # NULL + is_active=False together mean "invited, not yet activated" —
+    # accepting the invite (or a successful password reset) sets both.
+    password_hash: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    invited_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizers.id", ondelete="SET NULL")
+    )
+    invited_by: Mapped["Organizer | None"] = relationship(remote_side=[id])
+
+
+class AuthToken(Base):
+    """Single-use, expiring, opaque bearer token bound to one organizer —
+    shared shape for both invite and password-reset flows (see
+    AuthTokenPurpose). Only a hash of the raw token is ever stored."""
+
+    __tablename__ = "auth_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    organizer_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    purpose: Mapped[AuthTokenPurpose] = mapped_column(
+        _pg_enum(AuthTokenPurpose, "auth_token_purpose"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class OrganizerSession(Base):
+    """DB-backed session — deleting a row is an instant, real revocation.
+    The cookie carries only this row's id."""
+
+    __tablename__ = "organizer_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    organizer_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
