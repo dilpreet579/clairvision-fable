@@ -1,0 +1,14 @@
+INFO:     Started server process [29448]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49881 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57022 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57023 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57024 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57025 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57026 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57027 - "POST /auth/logout HTTP/1.1" 204 No Content
+INFO:     127.0.0.1:57028 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56995 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64125 - "GET /healthz HTTP/1.1" 200 OK

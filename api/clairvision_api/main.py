@@ -8,7 +8,7 @@ from sqlalchemy import text
 from clairvision_shared.config import get_settings
 
 from .deps import get_redis
-from .routers import cluster, events, gallery, images, search
+from .routers import auth, cluster, events, gallery, images, search
 
 
 def _warm_umap() -> None:
@@ -31,8 +31,13 @@ app.add_middleware(
     allow_origins=settings.cors_allow_origins_list,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Required now that organizer auth uses a session cookie. Safe only
+    # because cors_allow_origins_list is (and must stay) an explicit
+    # trusted list — never "*" combined with credentials.
+    allow_credentials=True,
 )
 
+app.include_router(auth.router)
 app.include_router(events.router)
 app.include_router(gallery.router)
 app.include_router(images.router)
