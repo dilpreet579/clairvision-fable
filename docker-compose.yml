@@ -45,6 +45,8 @@ services:
     volumes:
       - faiss_indexes:/app/indexes
       - ./pipeline/weights:/app/weights:ro
+      - model_cache:/root/.cache          # CLIP weights (~1.7GB), downloaded once
+      - insightface_models:/root/.insightface   # buffalo_l pack (~275MB)
     depends_on:
       db:
         condition: service_healthy
