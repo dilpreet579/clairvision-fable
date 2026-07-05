@@ -32,3 +32,4 @@ to add/edit.
 - [exif-orientation-must-be-applied](lessons/exif-orientation-must-be-applied.md) — DSLR portraits arrive sideways without exif_transpose; silently kills face recall.
 - [verify-container-code-after-rebuild](lessons/verify-container-code-after-rebuild.md) — an exit-0 rebuild left the old image running; verify code inside the container, and preload failures now kill the worker instead of failing every task.
 - [ubuntu-jammy-python311-is-rc1](lessons/ubuntu-jammy-python311-is-rc1.md) — jammy's python3.11 apt package is 3.11.0rc1 and crashes modern torch at import; GPU image now uses the 24.04 CUDA base. Includes verified T4 VRAM/benchmark facts.
+- [passlib-bcrypt-incompatible](lessons/passlib-bcrypt-incompatible.md) — passlib is unmaintained and permanently broken against bcrypt 4.x; use the bcrypt package directly instead.
