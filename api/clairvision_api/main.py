@@ -8,7 +8,7 @@ from sqlalchemy import text
 from clairvision_shared.config import get_settings
 
 from .deps import get_redis
-from .routers import auth, cluster, events, gallery, images, public, search
+from .routers import auth, cluster, events, gallery, images, organizers, public, search
 
 
 def _warm_umap() -> None:
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(organizers.router)
 # public before events: /events/directory must win over /events/{event_id}.
 app.include_router(public.router)
 app.include_router(events.router)

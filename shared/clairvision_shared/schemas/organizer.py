@@ -10,6 +10,7 @@ class OrganizerRead(BaseModel):
     id: uuid.UUID
     email: str
     is_active: bool
+    invited_by_id: uuid.UUID | None = None
     created_at: datetime
 
 

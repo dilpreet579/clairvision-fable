@@ -1,6 +1,6 @@
 """Organizer authentication: login/logout/me, forgot/reset password,
-accept-invite. Invite issuance itself lives in routers/organizers.py
-(Phase E wires the Resend sends; token issuance here works standalone)."""
+accept-invite. Invite issuance itself lives in routers/organizers.py."""
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -23,8 +23,10 @@ from clairvision_shared.schemas import (
 
 from ..auth_deps import get_current_organizer_optional, require_organizer
 from ..deps import get_db
+from ..services.email_service import EmailSendError, send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 # Simple in-process brute-force limiter for /auth/login — consistent with
 # this codebase's existing "simple in-process limiter is fine" posture.
@@ -153,8 +155,13 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
             )
         )
         db.commit()
-        # Phase E wires the actual Resend send; token issuance is
-        # independently correct/testable without it.
+        try:
+            send_password_reset_email(organizer.email, raw)
+        except EmailSendError:
+            # Unlike invite, a send failure here must NOT surface: the
+            # response must be indistinguishable from the no-such-email
+            # case (anti-enumeration), so log and stay 202.
+            logger.exception("password-reset email send failed")
     return None
 
 
