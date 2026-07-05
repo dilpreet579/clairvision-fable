@@ -13,11 +13,15 @@ import type { FaceRead, ImageRead } from "@/lib/types";
 export default function ImageCard({
   eventId,
   image,
+  searchPath,
   onToggleDuplicates,
   duplicatesOpen,
 }: {
   eventId: string;
   image: ImageRead;
+  /** Route of the search page in the current tree, e.g. /e/{slug}/search —
+   * the same card renders under both the public and dashboard trees. */
+  searchPath: string;
   onToggleDuplicates?: (image: ImageRead) => void;
   duplicatesOpen?: boolean;
 }) {
@@ -61,7 +65,7 @@ export default function ImageCard({
         faces?.map((face) => (
           <Link
             key={face.id}
-            href={`/events/${eventId}/search?face_id=${face.id}`}
+            href={`${searchPath}?face_id=${face.id}`}
             aria-label="Search photos of this person"
             className="absolute border border-accent/60 transition-colors duration-fast hover:border-accent"
             style={{

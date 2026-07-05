@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useParams } from "next/navigation";
+import { usePublicEvent } from "@/components/public/PublicEventContext";
 
 // Three.js needs window — load the whole view client-side only.
 const ClusterView = dynamic(() => import("@/components/cluster/ClusterView"), {
@@ -13,7 +13,7 @@ const ClusterView = dynamic(() => import("@/components/cluster/ClusterView"), {
   ),
 });
 
-export default function ClusterPage() {
-  const { eventId } = useParams<{ eventId: string }>();
-  return <ClusterView eventId={eventId} />;
+export default function PublicClusterPage() {
+  const event = usePublicEvent();
+  return <ClusterView eventId={event.id} />;
 }

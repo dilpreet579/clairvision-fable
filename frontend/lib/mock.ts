@@ -8,9 +8,13 @@ import type {
   DuplicateGroupRead,
   EventCreate,
   EventRead,
+  EventUpdate,
+  EventVisibility,
   FaceRead,
   ImagePage,
   ImageRead,
+  OrganizerRead,
+  PublicEventSummary,
   SearchResult,
 } from "./types";
 
@@ -70,8 +74,11 @@ function seedEvents() {
   const ready: EventRead = {
     id: "11111111-1111-4111-8111-111111111111",
     name: "Arora Wedding — Jaipur",
+    slug: "arora-wedding-jaipur",
     status: "ready",
     current_stage: "stage3_faces",
+    visibility: "published",
+    published_at: "2026-06-29T10:00:00Z",
     error_message: null,
     total_image_count: 4312,
     selected_image_count: 60,
@@ -80,8 +87,11 @@ function seedEvents() {
   const processing: EventRead = {
     id: "22222222-2222-4222-8222-222222222222",
     name: "DevSummit 2026 — Day 1",
+    slug: "devsummit-2026-day-1",
     status: "processing",
     current_stage: "stage2_duplicates",
+    visibility: "draft",
+    published_at: null,
     error_message: null,
     total_image_count: 2891,
     selected_image_count: null,
@@ -90,8 +100,11 @@ function seedEvents() {
   const failed: EventRead = {
     id: "33333333-3333-4333-8333-333333333333",
     name: "City Marathon Finish Line",
+    slug: "city-marathon-finish-line",
     status: "failed",
     current_stage: "ingestion",
+    visibility: "draft",
+    published_at: null,
     error_message: "Source URL returned 403 — collection is not publicly readable.",
     total_image_count: null,
     selected_image_count: null,
@@ -156,8 +169,11 @@ export async function mockCreateEvent(body: EventCreate): Promise<EventRead> {
   const event: EventRead = {
     id,
     name: body.name,
+    slug: mockSlugify(body.name),
     status: "pending",
     current_stage: "none",
+    visibility: "draft",
+    published_at: null,
     error_message: null,
     total_image_count: null,
     selected_image_count: null,
@@ -165,6 +181,155 @@ export async function mockCreateEvent(body: EventCreate): Promise<EventRead> {
   };
   eventStates.set(id, { event, pollsUntilAdvance: 1 });
   return { ...event };
+}
+
+function mockSlugify(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "event";
+}
+
+export async function mockUpdateEvent(
+  eventId: string,
+  body: EventUpdate,
+): Promise<EventRead> {
+  seedEvents();
+  await latency(150);
+  const state = eventStates.get(eventId);
+  if (!state) throw new Error(`Event ${eventId} not found`);
+  if (body.name !== undefined) state.event.name = body.name;
+  if (body.slug !== undefined) state.event.slug = mockSlugify(body.slug);
+  return { ...state.event };
+}
+
+export async function mockSetVisibility(
+  eventId: string,
+  visibility: EventVisibility,
+): Promise<EventRead> {
+  seedEvents();
+  await latency(150);
+  const state = eventStates.get(eventId);
+  if (!state) throw new Error(`Event ${eventId} not found`);
+  if (visibility === "published" && state.event.status !== "ready") {
+    throw new Error("event pipeline is not ready");
+  }
+  state.event.visibility = visibility;
+  if (visibility === "published" && !state.event.published_at) {
+    state.event.published_at = new Date().toISOString();
+  }
+  return { ...state.event };
+}
+
+export async function mockDeleteEvent(eventId: string): Promise<void> {
+  seedEvents();
+  await latency(200);
+  eventStates.delete(eventId);
+  galleries.delete(eventId);
+}
+
+// --- public (no auth) ---------------------------------------------------------
+
+export async function mockPublicDirectory(): Promise<PublicEventSummary[]> {
+  seedEvents();
+  await latency(150);
+  return Array.from(eventStates.values())
+    .filter((s) => s.event.visibility === "published")
+    .map((s) => ({
+      id: s.event.id,
+      slug: s.event.slug,
+      name: s.event.name,
+      published_at: s.event.published_at,
+    }))
+    .sort((a, b) => ((a.published_at ?? "") < (b.published_at ?? "") ? 1 : -1));
+}
+
+export async function mockResolveSlug(slug: string): Promise<PublicEventSummary> {
+  seedEvents();
+  await latency(120);
+  const state = Array.from(eventStates.values()).find((s) => s.event.slug === slug);
+  // Mocks mirror the API's 404-not-403 posture: unpublished looks absent.
+  if (!state || state.event.visibility !== "published") {
+    throw new Error("event not found");
+  }
+  return {
+    id: state.event.id,
+    slug: state.event.slug,
+    name: state.event.name,
+    published_at: state.event.published_at,
+  };
+}
+
+// --- auth & organizers ----------------------------------------------------------
+
+const mockOwner: OrganizerRead = {
+  id: "99999999-9999-4999-8999-999999999999",
+  email: "owner@example.com",
+  is_active: true,
+  invited_by_id: null,
+  created_at: "2026-06-01T08:00:00Z",
+};
+
+let mockSessionActive = false;
+const mockTeam: OrganizerRead[] = [mockOwner];
+
+export async function mockLogin(
+  email: string,
+  _password: string,
+): Promise<OrganizerRead> {
+  await latency(300);
+  mockSessionActive = true;
+  return { ...mockOwner, email };
+}
+
+export async function mockLogout(): Promise<void> {
+  await latency(100);
+  mockSessionActive = false;
+}
+
+export async function mockMe(): Promise<OrganizerRead> {
+  await latency(100);
+  if (!mockSessionActive) throw new Error("not authenticated");
+  return { ...mockOwner };
+}
+
+export async function mockForgotPassword(_email: string): Promise<void> {
+  await latency(250);
+}
+
+export async function mockResetPassword(
+  _token: string,
+  _newPassword: string,
+): Promise<void> {
+  await latency(250);
+}
+
+export async function mockAcceptInvite(
+  _token: string,
+  _password: string,
+): Promise<void> {
+  await latency(250);
+  mockSessionActive = false; // real flow sends the invitee to /login next
+}
+
+export async function mockListOrganizers(): Promise<OrganizerRead[]> {
+  await latency(150);
+  return mockTeam.map((o) => ({ ...o }));
+}
+
+export async function mockInviteOrganizer(email: string): Promise<OrganizerRead> {
+  await latency(300);
+  const invitee: OrganizerRead = {
+    id: `88888888-8888-4888-8888-${pad(mockTeam.length, 12)}`,
+    email,
+    is_active: false,
+    invited_by_id: mockOwner.id,
+    created_at: new Date().toISOString(),
+  };
+  mockTeam.push(invitee);
+  return { ...invitee };
 }
 
 // --- images, duplicate groups, faces ----------------------------------------
@@ -255,6 +420,7 @@ function buildGallery(eventId: string): MockGalleryState {
       width,
       height,
       face_count: faceCount,
+      hidden: false,
       duplicate_group: duplicateGroup,
     });
   }
@@ -267,16 +433,33 @@ export async function mockListImages(
   eventId: string,
   page: number,
   pageSize: number,
+  showHidden = false,
 ): Promise<ImagePage> {
   await latency(250);
   const state = buildGallery(eventId);
+  const visible = showHidden
+    ? state.gallery
+    : state.gallery.filter((img) => !img.hidden);
   const start = (page - 1) * pageSize;
   return {
-    items: state.gallery.slice(start, start + pageSize).map((img) => ({ ...img })),
+    items: visible.slice(start, start + pageSize).map((img) => ({ ...img })),
     page,
     page_size: pageSize,
-    total: state.gallery.length,
+    total: visible.length,
   };
+}
+
+export async function mockSetImageHidden(
+  eventId: string,
+  imageId: string,
+  hidden: boolean,
+): Promise<ImageRead> {
+  await latency(150);
+  const state = buildGallery(eventId);
+  const image = state.gallery.find((img) => img.id === imageId);
+  if (!image) throw new Error(`Image ${imageId} not found`);
+  image.hidden = hidden;
+  return { ...image };
 }
 
 export async function mockGetDuplicateGroup(

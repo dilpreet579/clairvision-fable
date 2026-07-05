@@ -3,6 +3,10 @@
 
 export type EventStatus = "pending" | "processing" | "ready" | "failed";
 
+// Visibility is the organizer's explicit publish decision — a separate
+// axis from the pipeline's EventStatus, never conflated.
+export type EventVisibility = "draft" | "published" | "archived";
+
 export type PipelineStage =
   | "none"
   | "ingestion"
@@ -27,11 +31,35 @@ export interface EventCreate {
 export interface EventRead {
   id: string;
   name: string;
+  slug: string;
   status: EventStatus;
   current_stage: PipelineStage;
+  visibility: EventVisibility;
+  published_at: string | null;
   error_message: string | null;
   total_image_count: number | null;
   selected_image_count: number | null;
+  created_at: string;
+}
+
+export interface EventUpdate {
+  name?: string;
+  slug?: string;
+}
+
+// Deliberately small public-safe shape (directory + slug resolution).
+export interface PublicEventSummary {
+  id: string;
+  slug: string;
+  name: string;
+  published_at: string | null;
+}
+
+export interface OrganizerRead {
+  id: string;
+  email: string;
+  is_active: boolean;
+  invited_by_id: string | null;
   created_at: string;
 }
 
@@ -46,6 +74,7 @@ export interface ImageRead {
   width: number | null;
   height: number | null;
   face_count: number;
+  hidden: boolean;
   duplicate_group: DuplicateGroupSummary | null;
 }
 

@@ -9,7 +9,14 @@ import type { DuplicateGroupRead, ImageRead } from "@/lib/types";
 
 const PAGE_SIZE = 24;
 
-export default function GalleryGrid({ eventId }: { eventId: string }) {
+export default function GalleryGrid({
+  eventId,
+  searchPath,
+}: {
+  eventId: string;
+  /** Search-page route of the hosting tree, passed through to ImageCard. */
+  searchPath: string;
+}) {
   const [images, setImages] = useState<ImageRead[]>([]);
   const [page, setPage] = useState(0); // last loaded page
   const [total, setTotal] = useState<number | null>(null);
@@ -117,6 +124,7 @@ export default function GalleryGrid({ eventId }: { eventId: string }) {
             <ImageCard
               eventId={eventId}
               image={image}
+              searchPath={searchPath}
               onToggleDuplicates={handleToggleDuplicates}
               duplicatesOpen={expandedGroup?.groupId === image.duplicate_group?.id}
             />

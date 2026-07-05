@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import TopNav from "@/components/TopNav";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,6 +13,9 @@ export const metadata: Metadata = {
   description: "AI-curated event photo galleries",
 };
 
+// No global nav here — the public event tree (PublicEventNav), the
+// dashboard (DashboardNav), and the chromeless (auth) pages each bring
+// their own.
 export default function RootLayout({
   children,
 }: {
@@ -21,12 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.className}>
-      <body className="min-h-screen bg-bg text-fg">
-        <TopNav />
-        <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6">
-          {children}
-        </main>
-      </body>
+      <body className="min-h-screen bg-bg text-fg">{children}</body>
     </html>
   );
 }

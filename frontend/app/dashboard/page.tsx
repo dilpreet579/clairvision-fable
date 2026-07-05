@@ -5,9 +5,16 @@ import { useCallback, useEffect, useState } from "react";
 import IngestForm from "@/components/IngestForm";
 import StatusLine from "@/components/StatusLine";
 import { listEvents } from "@/lib/api-client";
-import type { EventRead } from "@/lib/types";
+import type { EventRead, EventVisibility } from "@/lib/types";
 
-export default function EventsPage() {
+const VISIBILITY_LABELS: Record<EventVisibility, string> = {
+  draft: "Draft",
+  published: "Published",
+  archived: "Archived",
+};
+
+// Organizer event list — all visibilities, unlike the public directory.
+export default function DashboardPage() {
   const [events, setEvents] = useState<EventRead[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,17 +72,16 @@ export default function EventsPage() {
                 key={event.id}
                 className="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between"
               >
-                <div>
-                  {event.status === "ready" ? (
-                    <Link
-                      href={`/events/${event.id}/gallery`}
-                      className="text-sm text-accent transition-colors duration-fast hover:text-fg"
-                    >
-                      {event.name}
-                    </Link>
-                  ) : (
-                    <span className="text-sm text-fg">{event.name}</span>
-                  )}
+                <div className="flex items-baseline gap-3">
+                  <Link
+                    href={`/dashboard/events/${event.id}`}
+                    className="text-sm text-accent transition-colors duration-fast hover:text-fg"
+                  >
+                    {event.name}
+                  </Link>
+                  <span className="text-xs text-muted">
+                    {VISIBILITY_LABELS[event.visibility]}
+                  </span>
                 </div>
                 <StatusLine event={event} onUpdate={handleUpdate} />
               </li>

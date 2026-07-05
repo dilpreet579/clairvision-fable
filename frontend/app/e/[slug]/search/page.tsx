@@ -1,15 +1,17 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import GallerySkeleton from "@/components/GallerySkeleton";
 import ResultsGrid from "@/components/ResultsGrid";
 import SelfieUploadZone from "@/components/SelfieUploadZone";
+import { usePublicEvent } from "@/components/public/PublicEventContext";
 import { searchByFace, searchByUpload } from "@/lib/api-client";
 import type { SearchResult } from "@/lib/types";
 
 function SearchPageInner() {
-  const { eventId } = useParams<{ eventId: string }>();
+  const event = usePublicEvent();
+  const eventId = event.id;
   const searchParams = useSearchParams();
   const faceId = searchParams.get("face_id");
 
@@ -72,7 +74,7 @@ function SearchPageInner() {
   );
 }
 
-export default function SearchPage() {
+export default function PublicSearchPage() {
   return (
     <Suspense fallback={<GallerySkeleton count={8} />}>
       <SearchPageInner />

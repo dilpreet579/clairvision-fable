@@ -8,8 +8,12 @@ import type {
   DuplicateGroupRead,
   EventCreate,
   EventRead,
+  EventUpdate,
   FaceRead,
   ImagePage,
+  ImageRead,
+  OrganizerRead,
+  PublicEventSummary,
   SearchResult,
 } from "./types";
 
@@ -29,6 +33,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
+    // The frontend/API split is cross-origin even in local dev — without
+    // this the organizer session cookie is silently never sent.
+    credentials: "include",
     headers:
       init?.body instanceof FormData
         ? init?.headers
@@ -44,7 +51,79 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(detail, res.status);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+// --- auth -------------------------------------------------------------------
+
+export function login(email: string, password: string): Promise<OrganizerRead> {
+  if (USE_MOCKS) return mock.mockLogin(email, password);
+  return request<OrganizerRead>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function logout(): Promise<void> {
+  if (USE_MOCKS) return mock.mockLogout();
+  return request<void>("/auth/logout", { method: "POST" });
+}
+
+export function me(): Promise<OrganizerRead> {
+  if (USE_MOCKS) return mock.mockMe();
+  return request<OrganizerRead>("/auth/me");
+}
+
+export function forgotPassword(email: string): Promise<void> {
+  if (USE_MOCKS) return mock.mockForgotPassword(email);
+  return request<void>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<void> {
+  if (USE_MOCKS) return mock.mockResetPassword(token, newPassword);
+  return request<void>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+}
+
+export function acceptInvite(token: string, password: string): Promise<void> {
+  if (USE_MOCKS) return mock.mockAcceptInvite(token, password);
+  return request<void>("/auth/accept-invite", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+}
+
+// --- organizers ---------------------------------------------------------------
+
+export function listOrganizers(): Promise<OrganizerRead[]> {
+  if (USE_MOCKS) return mock.mockListOrganizers();
+  return request<OrganizerRead[]>("/organizers");
+}
+
+export function inviteOrganizer(email: string): Promise<OrganizerRead> {
+  if (USE_MOCKS) return mock.mockInviteOrganizer(email);
+  return request<OrganizerRead>("/organizers/invite", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+// --- public (no auth) ---------------------------------------------------------
+
+export function publicDirectory(): Promise<PublicEventSummary[]> {
+  if (USE_MOCKS) return mock.mockPublicDirectory();
+  return request<PublicEventSummary[]>("/events/directory");
+}
+
+export function resolveSlug(slug: string): Promise<PublicEventSummary> {
+  if (USE_MOCKS) return mock.mockResolveSlug(slug);
+  return request<PublicEventSummary>(`/e/${slug}`);
 }
 
 // --- events -----------------------------------------------------------------
@@ -64,17 +143,62 @@ export function getEvent(eventId: string): Promise<EventRead> {
   return request<EventRead>(`/events/${eventId}`);
 }
 
+export function updateEvent(eventId: string, body: EventUpdate): Promise<EventRead> {
+  if (USE_MOCKS) return mock.mockUpdateEvent(eventId, body);
+  return request<EventRead>(`/events/${eventId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function publishEvent(eventId: string): Promise<EventRead> {
+  if (USE_MOCKS) return mock.mockSetVisibility(eventId, "published");
+  return request<EventRead>(`/events/${eventId}/publish`, { method: "POST" });
+}
+
+export function archiveEvent(eventId: string): Promise<EventRead> {
+  if (USE_MOCKS) return mock.mockSetVisibility(eventId, "archived");
+  return request<EventRead>(`/events/${eventId}/archive`, { method: "POST" });
+}
+
+export function unarchiveEvent(eventId: string): Promise<EventRead> {
+  if (USE_MOCKS) return mock.mockSetVisibility(eventId, "draft");
+  return request<EventRead>(`/events/${eventId}/unarchive`, { method: "POST" });
+}
+
+export function deleteEvent(eventId: string): Promise<void> {
+  if (USE_MOCKS) return mock.mockDeleteEvent(eventId);
+  return request<void>(`/events/${eventId}`, { method: "DELETE" });
+}
+
 // --- images -----------------------------------------------------------------
 
 export function listImages(
   eventId: string,
   page: number,
   pageSize: number,
+  showHidden = false,
 ): Promise<ImagePage> {
-  if (USE_MOCKS) return mock.mockListImages(eventId, page, pageSize);
+  if (USE_MOCKS) return mock.mockListImages(eventId, page, pageSize, showHidden);
   return request<ImagePage>(
-    `/events/${eventId}/images?page=${page}&page_size=${pageSize}`,
+    `/events/${eventId}/images?page=${page}&page_size=${pageSize}${
+      showHidden ? "&show_hidden=true" : ""
+    }`,
   );
+}
+
+export function hideImage(eventId: string, imageId: string): Promise<ImageRead> {
+  if (USE_MOCKS) return mock.mockSetImageHidden(eventId, imageId, true);
+  return request<ImageRead>(`/events/${eventId}/images/${imageId}/hide`, {
+    method: "PATCH",
+  });
+}
+
+export function unhideImage(eventId: string, imageId: string): Promise<ImageRead> {
+  if (USE_MOCKS) return mock.mockSetImageHidden(eventId, imageId, false);
+  return request<ImageRead>(`/events/${eventId}/images/${imageId}/unhide`, {
+    method: "PATCH",
+  });
 }
 
 export function getDuplicateGroup(
