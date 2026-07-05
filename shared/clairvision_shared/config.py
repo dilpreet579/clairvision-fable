@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     face_min_size: int = 40
     mtcnn_thresholds: str = "0.6,0.7,0.7"
     mtcnn_keep_all: bool = True
+    # Post-detection confidence gate. MTCNN's O-Net threshold (0.7 above) is
+    # permissive enough to pass window reflections and edge fragments as
+    # "faces"; genuine frontal faces score >0.99. Drop anything below this so
+    # junk detections never reach ArcFace/FAISS. Raise toward 0.95 for stricter
+    # curation, lower toward 0.85 to favour recall of profile/backlit faces.
+    face_min_confidence: float = 0.90
 
     # ── Stage 3: face search ──
     face_search_similarity_threshold: float = 0.55

@@ -41,10 +41,13 @@ class FaceDetector:
         return max(valid) if valid else None
 
     def detect(self, img: PILImage.Image) -> list[FaceDet]:
-        """All faces with boxes + landmarks, filtered to FACE_MIN_SIZE.
+        """All faces with boxes + landmarks, filtered to FACE_MIN_SIZE and
+        FACE_MIN_CONFIDENCE.
 
         The 40x40 floor is applied here (not raised elsewhere) — smaller
-        faces are too low-resolution for reliable ArcFace identity.
+        faces are too low-resolution for reliable ArcFace identity. The
+        confidence floor drops marginal detections (reflections, edge
+        fragments) that clear MTCNN's permissive O-Net threshold.
         """
         settings = get_settings()
         boxes, probs, points = self.mtcnn.detect(img, landmarks=True)
@@ -52,7 +55,7 @@ class FaceDetector:
             return []
         dets: list[FaceDet] = []
         for box, prob, pts in zip(boxes, probs, points):
-            if prob is None:
+            if prob is None or prob < settings.face_min_confidence:
                 continue
             x1, y1, x2, y2 = (float(v) for v in box)
             w, h = x2 - x1, y2 - y1
