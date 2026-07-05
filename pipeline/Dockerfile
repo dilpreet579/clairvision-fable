@@ -14,8 +14,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-venv python3-pip libgl1 libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && python3 -m pip install --upgrade pip
+    && rm -rf /var/lib/apt/lists/*
+# Not upgrading pip here: apt's pip (24.0) is sufficient, and `pip install
+# --upgrade pip` fails trying to uninstall the apt-managed copy (no RECORD
+# file — a Debian/pip packaging conflict, not specific to this image).
 
 WORKDIR /app
 
