@@ -13,6 +13,7 @@ const config: Config = {
         muted2: "var(--muted2)",
         accent: "var(--accent)",
         accentHover: "var(--accent-hover)",
+        danger: "var(--danger)",
       },
       fontFamily: {
         serif: ["var(--font-newsreader)", "Georgia", "serif"],

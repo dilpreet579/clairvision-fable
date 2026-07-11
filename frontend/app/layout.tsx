@@ -23,9 +23,9 @@ export const metadata: Metadata = {
   description: "AI-curated event photo galleries",
 };
 
-// No global nav here — the public event tree (PublicEventNav), the
-// dashboard (DashboardNav), and the chromeless (auth) pages each bring
-// their own.
+// No global nav here — the public event page (app/e/[slug]/page.tsx,
+// which renders its own back-link + wordmark inline), the dashboard
+// (DashboardNav), and the chromeless (auth) pages each bring their own.
 export default function RootLayout({
   children,
 }: {

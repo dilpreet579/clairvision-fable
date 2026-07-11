@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <div>
-        <h1 className="text-base font-medium">Check your email</h1>
+        <h1 className="font-serif text-2xl text-fg">Check your email</h1>
         <p className="mt-4 text-sm text-muted">
           If an organizer account exists for {email.trim()}, a reset link is
           on its way. The link expires in one hour.
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1 className="text-base font-medium">Reset your password</h1>
+      <h1 className="font-serif text-2xl text-fg">Reset your password</h1>
       <p className="mt-4 text-sm text-muted">
         Enter your organizer email and we&apos;ll send a reset link.
       </p>

@@ -11,6 +11,7 @@
   --muted2: #6f685f; /* dimmer secondary text: footnotes, fine print, timestamps */
   --accent: #d9a05b; /* interactive amber — links, buttons, active states */
   --accent-hover: #e2ad6c;
+  --danger: #cf4a30; /* muted rust — genuine error/validation-failure text only */
 }
 
 html,

@@ -9,7 +9,7 @@ export default function AuthLayout({
 }) {
   return (
     <main className="mx-auto w-full max-w-sm px-4 pb-16 pt-20 sm:px-0">
-      <Link href="/" className="text-sm font-medium tracking-wide text-fg">
+      <Link href="/" className="font-serif text-lg italic tracking-wide text-fg">
         ClairVision
       </Link>
       <div className="mt-10">{children}</div>

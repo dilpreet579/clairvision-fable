@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { authButtonClass, authInputClass } from "@/components/auth/authStyles";
+import {
+  authButtonClass,
+  authErrorClass,
+  authInputClass,
+} from "@/components/auth/authStyles";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -35,7 +39,7 @@ function TokenPasswordFormInner({
   if (!token) {
     return (
       <div>
-        <h1 className="text-base font-medium">{heading}</h1>
+        <h1 className="font-serif text-2xl text-fg">{heading}</h1>
         <p className="mt-4 text-sm text-muted">
           This link is missing its token. Use the full link from your email.
         </p>
@@ -64,7 +68,7 @@ function TokenPasswordFormInner({
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1 className="text-base font-medium">{heading}</h1>
+      <h1 className="font-serif text-2xl text-fg">{heading}</h1>
       <p className="mt-4 text-sm text-muted">{intro}</p>
       <div className="mt-6 space-y-4">
         <input
@@ -85,15 +89,17 @@ function TokenPasswordFormInner({
         />
       </div>
       {tooShort && (
-        <p className="mt-3 text-sm text-muted">
+        <p className={`mt-3 text-sm ${authErrorClass}`}>
           Passwords need at least {MIN_PASSWORD_LENGTH} characters.
         </p>
       )}
-      {mismatch && <p className="mt-3 text-sm text-muted">Passwords don&apos;t match.</p>}
+      {mismatch && (
+        <p className={`mt-3 text-sm ${authErrorClass}`}>Passwords don&apos;t match.</p>
+      )}
       <button type="submit" disabled={!ready} className={authButtonClass}>
         {submitting ? submittingLabel : submitLabel}
       </button>
-      {error && <p className="mt-3 text-sm text-muted">{error}</p>}
+      {error && <p className={`mt-3 text-sm ${authErrorClass}`}>{error}</p>}
       <p className="mt-8 text-sm">
         <Link
           href="/login"
