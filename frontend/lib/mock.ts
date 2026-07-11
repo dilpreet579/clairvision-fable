@@ -280,12 +280,22 @@ export async function mockLogin(
 ): Promise<OrganizerRead> {
   await latency(300);
   mockSessionActive = true;
+  // Set a fake session cookie so the middleware's cookie-presence check passes.
+  // The real session check (dashboard layout → mockMe()) still enforces
+  // mockSessionActive — this cookie is purely for the edge-middleware fast-path.
+  if (typeof document !== "undefined") {
+    document.cookie = "cv_session=mock; path=/; SameSite=Lax";
+  }
   return { ...mockOwner, email };
 }
 
 export async function mockLogout(): Promise<void> {
   await latency(100);
   mockSessionActive = false;
+  // Clear the fake cookie so the middleware redirects to /login correctly.
+  if (typeof document !== "undefined") {
+    document.cookie = "cv_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
 }
 
 export async function mockMe(): Promise<OrganizerRead> {
