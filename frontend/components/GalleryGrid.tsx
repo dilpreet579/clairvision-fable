@@ -122,7 +122,13 @@ export default function GalleryGrid({
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <p className="pb-3 pt-1 text-xs text-muted2">
+        Hover to see detected faces — tap a face to find that person, or tap the photo to view it full-size.
+      </p>
+      <div
+        className="grid gap-2.5"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
+      >
         {images.map((image, index) => (
           <Fragment key={image.duplicate_group?.id ?? image.id}>
             <ImageCard
@@ -145,6 +151,7 @@ export default function GalleryGrid({
                   eventId={eventId}
                   groupId={expandedGroup.groupId}
                   onSelected={handleSelected}
+                  onCollapse={() => setExpandedGroup(null)}
                 />
               )}
           </Fragment>

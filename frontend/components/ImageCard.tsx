@@ -87,7 +87,7 @@ export default function ImageCard({
         src={thumbnailUrl(eventId, image.id, 400)}
         alt=""
         loading="lazy"
-        className="block aspect-[4/3] w-full object-cover"
+        className="block aspect-square w-full object-cover"
       />
 
       {/* subtle overlay while revealed */}
@@ -103,14 +103,18 @@ export default function ImageCard({
       {revealed &&
         faces?.map((face) => (
           <span key={face.id}>
+            {/* visual outline: amber fill + glow matching prototype */}
             <span
               aria-hidden
-              className="pointer-events-none absolute border border-accent/60"
+              className="pointer-events-none absolute border-[1.5px] border-accent"
               style={{
                 left: `${(face.bbox_x / w) * 100}%`,
                 top: `${(face.bbox_y / h) * 100}%`,
                 width: `${(face.bbox_w / w) * 100}%`,
                 height: `${(face.bbox_h / h) * 100}%`,
+                borderRadius: "5px",
+                background: "rgba(217,160,91,0.10)",
+                boxShadow: "0 0 0 3px rgba(217,160,91,0.12)",
               }}
             />
             <button
@@ -134,15 +138,20 @@ export default function ImageCard({
 
       {/* metadata revealed with the overlay */}
       <figcaption
-        className={`absolute inset-x-0 bottom-0 flex items-end justify-between p-2 transition-opacity duration-fast ${
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-fast ${
           revealed || duplicatesOpen ? "opacity-100" : "opacity-0"
         }`}
       >
-        <span className="text-xs text-fg/80">
-          {image.face_count > 0
-            ? `${image.face_count} face${image.face_count === 1 ? "" : "s"}`
-            : ""}
-        </span>
+        {/* top-left: face count badge — monospace, semi-opaque pill */}
+        {revealed && image.face_count > 0 && (
+          <span
+            className="absolute left-2 top-2 rounded-sm font-mono text-[10px] tracking-[0.04em] text-fg/90"
+            style={{ background: "rgba(10,8,6,0.62)", padding: "3px 6px" }}
+          >
+            {image.face_count} face{image.face_count === 1 ? "" : "s"} · tap a face
+          </span>
+        )}
+        {/* bottom-left: burst pill */}
         {image.duplicate_group && onToggleDuplicates && (
           <button
             type="button"
@@ -150,7 +159,7 @@ export default function ImageCard({
               e.stopPropagation();
               onToggleDuplicates(image);
             }}
-            className={`rounded-full border px-3 py-1 text-xs backdrop-blur-sm transition-colors duration-fast ${
+            className={`pointer-events-auto absolute bottom-2 left-2 rounded-full border px-3 py-1 text-xs backdrop-blur-sm transition-colors duration-fast ${
               duplicatesOpen
                 ? "border-accent bg-black/40 text-accent"
                 : "border-fg/20 bg-black/30 text-fg/90 hover:border-accent hover:text-accent"

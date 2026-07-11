@@ -113,7 +113,7 @@ export default function ResultsGrid({
               type="button"
               disabled={selected.size === 0 || downloading}
               onClick={handleBulkDownload}
-              className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors duration-fast hover:bg-accent hover:text-bg disabled:cursor-default disabled:border-line disabled:text-muted disabled:hover:bg-transparent"
+              className="rounded-md bg-accent px-4 py-2 text-xs font-medium text-bg transition-colors duration-fast hover:bg-accentHover disabled:cursor-default disabled:opacity-40"
             >
               {downloading ? "Downloading…" : `Download (${selected.size})`}
             </button>
@@ -121,7 +121,10 @@ export default function ResultsGrid({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div
+        className="grid gap-2.5"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
+      >
         {results.map((result, index) => {
           const isSelected = selected.has(result.image_id);
           return (
@@ -134,7 +137,7 @@ export default function ResultsGrid({
                 src={thumbnailUrl(eventId, result.image_id, 400)}
                 alt=""
                 loading="lazy"
-                className="block aspect-[4/3] w-full object-cover"
+                className="block aspect-square w-full object-cover"
               />
               <figcaption className="absolute left-2 top-2 rounded-sm bg-black/60 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-accent backdrop-blur-sm">
                 {Math.round(result.similarity * 100)}%

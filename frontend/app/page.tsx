@@ -160,13 +160,13 @@ export default function HomePage() {
                   <li key={event.id} className="border-b border-line">
                     <Link
                       href={`/e/${event.slug}`}
-                      className="group flex items-center justify-between gap-4 px-2 py-5 transition-colors duration-fast hover:bg-surface"
+                      className="group -mx-3 flex items-center justify-between gap-4 rounded px-3 py-6 transition-colors duration-fast hover:bg-surface"
                     >
                       <span className="flex min-w-0 items-baseline gap-4">
-                        <span className="font-mono text-xs tabular-nums text-muted transition-colors duration-fast group-hover:text-accent">
+                        <span className="font-mono text-xs tabular-nums text-muted2 transition-colors duration-fast group-hover:text-accent">
                           {String(i + 1).padStart(2, "0")}
                         </span>
-                        <span className="truncate font-serif text-[clamp(1.25rem,2.5vw,1.6875rem)] text-fg">
+                        <span className="truncate font-serif text-[clamp(1.25rem,2.5vw,1.6875rem)] text-fg transition-colors duration-fast group-hover:text-accent">
                           {event.name}
                         </span>
                       </span>

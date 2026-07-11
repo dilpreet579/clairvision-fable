@@ -119,23 +119,31 @@ export default function Lightbox({
       aria-modal="true"
       aria-label="Photo viewer"
     >
-      {/* top bar: counter + close */}
+      {/* top bar: close (left) | counter (center) | download (right) — matches prototype */}
       <div
         className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="font-mono text-xs tabular-nums text-muted">
-          {index + 1} / {totalCount ?? items.length}
-          {loadingMore && <span className="ml-2 italic text-muted2">loading more…</span>}
-        </span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="text-2xl leading-none text-muted transition-colors duration-fast hover:text-fg"
+          className="text-2xl leading-none text-muted transition-colors duration-fast hover:text-accent"
         >
           ×
         </button>
+        <span className="font-mono text-xs tabular-nums text-muted">
+          {index + 1} / {totalCount ?? items.length}
+          {loadingMore && <span className="ml-2 italic text-muted2">loading more…</span>}
+        </span>
+        <a
+          href={fullImageUrl(eventId, current.id)}
+          download={`photo-${current.id}.jpg`}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-md bg-accent px-4 py-2 text-xs font-medium text-bg transition-colors duration-fast hover:bg-accentHover"
+        >
+          Download
+        </a>
       </div>
 
       {/* prev / next */}
@@ -185,14 +193,18 @@ export default function Lightbox({
           {naturalSize &&
             faces?.map((face) => (
               <span key={face.id}>
+                {/* amber fill + glow matching gallery face boxes */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute border border-accent/60"
+                  className="pointer-events-none absolute border-[1.5px] border-accent"
                   style={{
                     left: `${(face.bbox_x / naturalSize.w) * 100}%`,
                     top: `${(face.bbox_y / naturalSize.h) * 100}%`,
                     width: `${(face.bbox_w / naturalSize.w) * 100}%`,
                     height: `${(face.bbox_h / naturalSize.h) * 100}%`,
+                    borderRadius: "6px",
+                    background: "rgba(217,160,91,0.08)",
+                    boxShadow: "0 0 0 3px rgba(217,160,91,0.10)",
                   }}
                 />
                 <button
@@ -216,9 +228,9 @@ export default function Lightbox({
         </div>
       </div>
 
-      {/* bottom bar: duplicate note + download */}
+      {/* bottom bar: burst note + hint text */}
       <div
-        className="absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-center justify-center gap-4 p-4 sm:p-6"
+        className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2 pb-4 pt-2 text-center"
         onClick={(e) => e.stopPropagation()}
       >
         {current.duplicateCount && current.duplicateCount > 1 && (
@@ -226,13 +238,9 @@ export default function Lightbox({
             Curated pick from a {current.duplicateCount}-photo burst
           </span>
         )}
-        <a
-          href={fullImageUrl(eventId, current.id)}
-          download={`photo-${current.id}.jpg`}
-          className="rounded-full border border-line px-4 py-1.5 text-xs text-fg transition-colors duration-fast hover:border-accent hover:text-accent"
-        >
-          Download
-        </a>
+        <p className="text-[11px] text-muted2">
+          Tap a face to find that person · Esc to close
+        </p>
       </div>
     </div>
   );

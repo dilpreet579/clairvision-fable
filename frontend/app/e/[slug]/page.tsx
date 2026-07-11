@@ -49,15 +49,15 @@ function TabButton({
 /** Centered "scanning" state — a sweeping bar, no fabricated face counts. */
 function ScanningCard() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-lg border border-line px-6 py-16 text-center">
+    <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-line px-6 py-16 text-center" style={{ background: "rgba(27,23,18,0.5)" }}>
       <p className="font-serif text-xl italic text-fg">Looking for you…</p>
-      <div className="h-1 w-48 overflow-hidden rounded-full bg-line">
+      <div className="h-0.5 w-48 overflow-hidden rounded-full bg-line">
         <div
           className="h-full w-1/3 rounded-full bg-accent"
           style={{ animation: "cvsweep 1.6s ease-in-out infinite" }}
         />
       </div>
-      <p className="text-xs text-muted2">Matching against this event's photos.</p>
+      <p className="font-mono text-xs tracking-wide text-accent" style={{ letterSpacing: "0.03em" }}>Matching this event's faces</p>
     </div>
   );
 }
@@ -105,15 +105,15 @@ export default function PublicEventPage() {
 
   return (
     <div>
-      {/* back-link row + wordmark */}
+      {/* wordmark left, back-link right — matches prototype */}
       <div className="flex items-center justify-between gap-4">
+        <span className="font-serif text-lg italic tracking-wide text-fg">ClairVision</span>
         <Link
           href="/"
           className="text-sm text-muted transition-colors duration-fast hover:text-fg"
         >
           ← All events
         </Link>
-        <span className="font-serif text-lg italic tracking-wide text-fg">ClairVision</span>
       </div>
 
       {/* event name + subheader */}
@@ -191,6 +191,17 @@ export default function PublicEventPage() {
               <div className="mt-6">
                 <ResultsGrid eventId={eventId} results={results} onFaceSelect={runFaceSearch} />
               </div>
+              <p className="mt-6 text-xs text-muted2">
+                Not all of these you? Lighting and angles affect confidence —{" "}
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="underline underline-offset-2 transition-colors duration-fast hover:text-fg"
+                >
+                  try another selfie
+                </button>
+                .
+              </p>
             </div>
           )}
         </div>
