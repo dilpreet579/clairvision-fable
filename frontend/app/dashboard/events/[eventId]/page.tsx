@@ -16,13 +16,12 @@ import {
 import type { EventRead } from "@/lib/types";
 
 const inputClass =
-  "w-full border-b border-line bg-transparent px-0 py-2 text-sm text-fg " +
+  "w-full border-b border-line bg-transparent px-0 py-2.5 text-sm text-fg " +
   "placeholder:text-muted focus:border-accent focus:outline-none " +
   "transition-colors duration-fast";
 
-const actionClass =
-  "text-sm text-accent transition-colors duration-fast hover:text-fg " +
-  "disabled:cursor-default disabled:text-muted";
+const labelClass =
+  "block text-[11px] font-medium uppercase tracking-[0.1em] text-muted2 mb-1.5";
 
 export default function EventManagePage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -56,8 +55,19 @@ export default function EventManagePage() {
   }, [eventId]);
 
   if (loadError) {
-    return <p className="text-sm text-muted">{loadError}</p>;
+    return (
+      <div className="pt-8">
+        <p className="text-sm text-muted">{loadError}</p>
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-block text-sm text-accent transition-colors duration-fast hover:text-fg"
+        >
+          ← Back to events
+        </Link>
+      </div>
+    );
   }
+
   if (event === null) {
     return (
       <div className="flex h-[40vh] items-center justify-center">
@@ -115,78 +125,105 @@ export default function EventManagePage() {
     }
   }
 
+  const publicUrl = event.visibility === "published" ? `/e/${event.slug}` : null;
+
   return (
-    <div>
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h1 className="text-base font-medium">{event.name}</h1>
-        <StatusLine event={event} onUpdate={setEvent} />
-      </div>
-      <p className="mt-1 text-sm text-muted">
-        {event.visibility === "published" ? (
-          <>
-            Published —{" "}
-            <Link
-              href={`/e/${event.slug}`}
-              className="text-accent transition-colors duration-fast hover:text-fg"
-            >
-              /e/{event.slug}
-            </Link>
-          </>
-        ) : event.visibility === "archived" ? (
-          "Archived — not publicly visible."
-        ) : (
-          "Draft — not publicly visible."
-        )}
-      </p>
+    <div style={{ animation: "cvfade 0.3s ease-out" }}>
+      {/* ── Back link ───────────────────────────────── */}
+      <Link
+        href="/dashboard"
+        className="text-sm text-muted transition-colors duration-fast hover:text-fg"
+      >
+        ← Events
+      </Link>
 
-      {/* rename / slug */}
-      <form onSubmit={handleSave} className="mt-10 max-w-md">
-        <h2 className="text-base font-medium">Details</h2>
-        <div className="mt-4 space-y-4">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Event name"
-            maxLength={200}
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="URL slug"
-            maxLength={200}
-            className={inputClass}
-          />
+      {/* ── Event header ────────────────────────────── */}
+      <div className="mt-5 flex flex-col gap-3 border-b border-line pb-7 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-serif text-[clamp(1.6rem,3vw,2rem)] leading-tight text-fg">
+            {event.name}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted">
+            {publicUrl ? (
+              <>
+                Published —{" "}
+                <Link
+                  href={publicUrl}
+                  className="text-accent underline underline-offset-2 transition-colors duration-fast hover:text-fg"
+                >
+                  {publicUrl}
+                </Link>
+              </>
+            ) : event.visibility === "archived" ? (
+              "Archived — not publicly visible."
+            ) : (
+              "Draft — not publicly visible."
+            )}
+          </p>
         </div>
-        <p className="mt-2 text-xs text-muted">
-          Changing the slug breaks any previously shared /e/ link.
-        </p>
-        <button
-          type="submit"
-          disabled={!dirty || saving || !name.trim() || !slug.trim()}
-          className={`mt-4 ${actionClass}`}
-        >
-          {saving ? "Saving..." : "Save changes"}
-        </button>
-      </form>
+        <div className="shrink-0">
+          <StatusLine event={event} onUpdate={setEvent} />
+        </div>
+      </div>
 
-      {/* visibility + delete */}
-      <div className="mt-10">
-        <h2 className="text-base font-medium">Visibility</h2>
-        <div className="mt-4 flex items-center gap-6">
+      {/* ── Details form ────────────────────────────── */}
+      <section className="mt-10 max-w-md">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted2">
+          Details
+        </p>
+        <form onSubmit={handleSave} className="mt-5 space-y-5">
+          <div>
+            <label className={labelClass}>Event name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Event name"
+              maxLength={200}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>URL slug</label>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="url-slug"
+              maxLength={200}
+              className={inputClass}
+            />
+            <p className="mt-1.5 text-[11px] text-muted2">
+              Changing the slug breaks any previously shared /e/ link.
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={!dirty || saving || !name.trim() || !slug.trim()}
+            className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-colors duration-fast hover:bg-accentHover disabled:cursor-default disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </form>
+      </section>
+
+      {/* ── Visibility actions ───────────────────────── */}
+      <section className="mt-12 border-t border-line pt-10">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted2">
+          Visibility
+        </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           {event.visibility !== "published" && (
             <button
               type="button"
               disabled={actionBusy || event.status !== "ready"}
               onClick={() => run(() => publishEvent(event.id))}
-              className={actionClass}
               title={
                 event.status !== "ready"
-                  ? "The pipeline must finish before publishing."
+                  ? "Pipeline must finish before publishing."
                   : undefined
               }
+              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-bg transition-colors duration-fast hover:bg-accentHover disabled:cursor-default disabled:opacity-50"
             >
               Publish
             </button>
@@ -196,7 +233,7 @@ export default function EventManagePage() {
               type="button"
               disabled={actionBusy}
               onClick={() => run(() => archiveEvent(event.id))}
-              className={actionClass}
+              className="rounded-full border border-line px-4 py-2 text-sm text-muted transition-colors duration-fast hover:border-fg hover:text-fg disabled:cursor-default disabled:opacity-50"
             >
               Archive
             </button>
@@ -206,58 +243,61 @@ export default function EventManagePage() {
               type="button"
               disabled={actionBusy}
               onClick={() => run(() => unarchiveEvent(event.id))}
-              className={actionClass}
+              className="rounded-full border border-line px-4 py-2 text-sm text-muted transition-colors duration-fast hover:border-fg hover:text-fg disabled:cursor-default disabled:opacity-50"
             >
               Unarchive to draft
             </button>
           )}
+
+          {/* delete — two-step confirm */}
           {!confirmingDelete ? (
             <button
               type="button"
               disabled={actionBusy}
               onClick={() => setConfirmingDelete(true)}
-              className="text-sm text-muted transition-colors duration-fast hover:text-fg"
+              className="ml-auto rounded-full border border-danger/40 px-4 py-2 text-sm text-danger/70 transition-colors duration-fast hover:border-danger hover:text-danger disabled:cursor-default disabled:opacity-50"
             >
               Delete event
             </button>
           ) : (
-            <span className="flex items-center gap-4 text-sm">
-              <span className="text-muted">
-                Deletes all photos, faces and search data. Permanent.
+            <div className="ml-auto flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 px-4 py-2.5">
+              <span className="text-xs text-muted">
+                Permanent — deletes all photos, faces and search data.
               </span>
               <button
                 type="button"
                 disabled={actionBusy}
                 onClick={handleDelete}
-                className={actionClass}
+                className="shrink-0 text-sm font-medium text-danger transition-colors duration-fast hover:text-fg"
               >
-                {actionBusy ? "Deleting..." : "Confirm delete"}
+                {actionBusy ? "Deleting…" : "Confirm"}
               </button>
               <button
                 type="button"
                 disabled={actionBusy}
                 onClick={() => setConfirmingDelete(false)}
-                className="text-muted transition-colors duration-fast hover:text-fg"
+                className="shrink-0 text-sm text-muted transition-colors duration-fast hover:text-fg"
               >
                 Cancel
               </button>
-            </span>
+            </div>
           )}
         </div>
-        {error && <p className="mt-3 text-sm text-muted">{error}</p>}
-      </div>
+        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+      </section>
 
-      {/* curation preview */}
-      <div className="mt-14">
-        <h2 className="text-base font-medium">Photos</h2>
-        <p className="mt-1 text-sm text-muted">
-          Hidden photos stay out of the public gallery and search —
-          reversible any time.
+      {/* ── Curation grid ───────────────────────────── */}
+      <section className="mt-12 border-t border-line pt-10">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted2">
+          Photos
         </p>
-        <div className="mt-4">
+        <p className="mt-1.5 text-sm text-muted">
+          Hidden photos stay out of the public gallery and search — reversible any time.
+        </p>
+        <div className="mt-6">
           <PreviewGrid eventId={event.id} />
         </div>
-      </div>
+      </section>
     </div>
   );
 }
