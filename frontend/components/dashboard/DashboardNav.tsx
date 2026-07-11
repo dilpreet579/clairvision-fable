@@ -42,11 +42,11 @@ export default function DashboardNav() {
   }
 
   return (
-    <header className="border-b border-surface">
+    <header className="border-b border-line">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/dashboard"
-          className="text-sm font-medium tracking-wide text-fg"
+          className="font-serif text-lg italic tracking-wide text-fg"
         >
           ClairVision
         </Link>

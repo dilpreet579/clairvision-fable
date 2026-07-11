@@ -16,7 +16,7 @@ import {
 import type { EventRead } from "@/lib/types";
 
 const inputClass =
-  "w-full border-b border-surface bg-transparent px-0 py-2 text-sm text-fg " +
+  "w-full border-b border-line bg-transparent px-0 py-2 text-sm text-fg " +
   "placeholder:text-muted focus:border-accent focus:outline-none " +
   "transition-colors duration-fast";
 
@@ -126,7 +126,7 @@ export default function EventManagePage() {
           <>
             Published —{" "}
             <Link
-              href={`/e/${event.slug}/gallery`}
+              href={`/e/${event.slug}`}
               className="text-accent transition-colors duration-fast hover:text-fg"
             >
               /e/{event.slug}
@@ -251,7 +251,7 @@ export default function EventManagePage() {
       <div className="mt-14">
         <h2 className="text-base font-medium">Photos</h2>
         <p className="mt-1 text-sm text-muted">
-          Hidden photos stay out of the public gallery, search and cluster —
+          Hidden photos stay out of the public gallery and search —
           reversible any time.
         </p>
         <div className="mt-4">

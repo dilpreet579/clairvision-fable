@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { listFaces, thumbnailUrl } from "@/lib/api-client";
 import type { FaceRead, ImageRead } from "@/lib/types";
@@ -13,20 +12,23 @@ const MIN_TAP_TARGET_PX = 44;
  * A photo sitting directly on the background — no card chrome.
  * Metadata (face count, duplicate indicator, clickable face regions)
  * reveals on hover with a mouse, or on first tap on touch devices
- * (hover doesn't exist there); a second tap on the photo hides it again.
+ * (hover doesn't exist there); a second tap on the photo opens the
+ * full-size lightbox.
  */
 export default function ImageCard({
   eventId,
   image,
-  searchPath,
+  onFaceSelect,
+  onOpenPhoto,
   onToggleDuplicates,
   duplicatesOpen,
 }: {
   eventId: string;
   image: ImageRead;
-  /** Route of the search page in the current tree, e.g. /e/{slug}/search —
-   * the same card renders under both the public and dashboard trees. */
-  searchPath: string;
+  /** Tapping a detected face region calls this instead of navigating. */
+  onFaceSelect: (faceId: string) => void;
+  /** Tapping the photo itself (not a face) opens the lightbox. */
+  onOpenPhoto: () => void;
   onToggleDuplicates?: (image: ImageRead) => void;
   duplicatesOpen?: boolean;
 }) {
@@ -52,14 +54,23 @@ export default function ImageCard({
     loadFaces();
   }
 
-  // Touch path: the first tap reveals, a second tap on the photo itself
-  // conceals. Face links and the duplicates button stop propagation, so
-  // once revealed they behave normally. No-op on hover-capable devices —
-  // there the overlay already follows the cursor.
+  // Hover-capable devices: the overlay already follows the cursor, so a
+  // click on the photo opens the lightbox straight away. Touch devices:
+  // the first tap reveals face targets/the duplicates pill, a second tap
+  // on the photo itself opens the lightbox.
   function handleClick() {
-    if (window.matchMedia("(hover: hover)").matches) return;
-    setTapped((prev) => !prev);
-    loadFaces();
+    const hoverCapable =
+      typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+    if (hoverCapable) {
+      onOpenPhoto();
+      return;
+    }
+    if (!tapped) {
+      setTapped(true);
+      loadFaces();
+    } else {
+      onOpenPhoto();
+    }
   }
 
   const w = image.width ?? 1;
@@ -102,10 +113,13 @@ export default function ImageCard({
                 height: `${(face.bbox_h / h) * 100}%`,
               }}
             />
-            <Link
-              href={`${searchPath}?face_id=${face.id}`}
+            <button
+              type="button"
               aria-label="Search photos of this person"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFaceSelect(face.id);
+              }}
               className="absolute"
               style={{
                 left: `${((face.bbox_x + face.bbox_w / 2) / w) * 100}%`,
@@ -136,8 +150,10 @@ export default function ImageCard({
               e.stopPropagation();
               onToggleDuplicates(image);
             }}
-            className={`px-2 py-2 text-xs transition-colors duration-fast ${
-              duplicatesOpen ? "text-fg" : "text-accent hover:text-fg"
+            className={`rounded-full border px-3 py-1 text-xs backdrop-blur-sm transition-colors duration-fast ${
+              duplicatesOpen
+                ? "border-accent bg-black/40 text-accent"
+                : "border-fg/20 bg-black/30 text-fg/90 hover:border-accent hover:text-accent"
             }`}
           >
             {image.duplicate_group.member_count} shots

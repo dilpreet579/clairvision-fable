@@ -58,12 +58,12 @@ export default function DuplicateDrawer({
   }
 
   return (
-    <div className="col-span-full py-4">
+    <div className="col-span-full rounded-lg border border-line bg-surface px-4 py-4">
       {error && <p className="text-sm text-muted">{error}</p>}
       {!error && group === null && (
         <div className="flex gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="cv-skeleton h-24 w-36" />
+            <div key={i} className="cv-skeleton h-24 w-36 rounded-sm" />
           ))}
         </div>
       )}
@@ -84,13 +84,17 @@ export default function DuplicateDrawer({
                 <img
                   src={thumbnailUrl(eventId, member.id, 240)}
                   alt=""
-                  className={`block h-24 w-36 object-cover transition-opacity duration-fast ${
+                  className={`block h-24 w-36 rounded-sm object-cover transition-opacity duration-fast ${
                     member.is_selected
-                      ? "opacity-100 outline outline-1 outline-accent"
-                      : "opacity-70 hover:opacity-100"
+                      ? "opacity-100 outline outline-1 outline-offset-1 outline-accent"
+                      : "opacity-30 hover:opacity-70"
                   }`}
                 />
-                <span className="mt-1 block text-[11px] text-muted">
+                <span
+                  className={`mt-1 block text-[11px] ${
+                    member.is_selected ? "text-accent" : "text-muted2"
+                  }`}
+                >
                   {member.is_selected
                     ? "selected"
                     : member.nima_score != null

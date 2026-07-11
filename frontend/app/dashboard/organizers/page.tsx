@@ -5,7 +5,7 @@ import { inviteOrganizer, listOrganizers } from "@/lib/api-client";
 import type { OrganizerRead } from "@/lib/types";
 
 const inputClass =
-  "w-full border-b border-surface bg-transparent px-0 py-2 text-sm text-fg " +
+  "w-full border-b border-line bg-transparent px-0 py-2 text-sm text-fg " +
   "placeholder:text-muted focus:border-accent focus:outline-none " +
   "transition-colors duration-fast";
 
@@ -77,7 +77,7 @@ export default function OrganizersPage() {
       <div className="mt-4">
         {loadError && <p className="text-sm text-muted">{loadError}</p>}
         {!loadError && team === null && (
-          <ul className="divide-y divide-surface">
+          <ul className="divide-y divide-line">
             {[0, 1].map((i) => (
               <li key={i} className="py-4">
                 <div className="cv-skeleton h-4 w-56 rounded-sm" />
@@ -86,7 +86,7 @@ export default function OrganizersPage() {
           </ul>
         )}
         {team !== null && (
-          <ul className="divide-y divide-surface">
+          <ul className="divide-y divide-line">
             {team.map((organizer) => (
               <li
                 key={organizer.id}

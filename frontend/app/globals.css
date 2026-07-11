@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0a0a;
-  --surface: #161616;
-  --fg: #ececec;
-  --muted: #8b8b8b;
-  --accent: #8aa9c9; /* single muted blue, interactive elements only */
+  --bg: #0f0d0a;
+  --surface: #1b1712; /* panel/card fills: input boxes, expanded rows, toasts, hover-row backgrounds */
+  --line: #2e2921; /* borders and dividers — distinct from panel fill */
+  --fg: #ede8e1;
+  --muted: #9a9189;
+  --muted2: #6f685f; /* dimmer secondary text: footnotes, fine print, timestamps */
+  --accent: #d9a05b; /* interactive amber — links, buttons, active states */
+  --accent-hover: #e2ad6c;
 }
 
 html,
@@ -55,4 +58,59 @@ body {
 .cv-skeleton {
   background: var(--surface);
   animation: cv-skeleton 1.4s ease-in-out infinite;
+}
+
+/* Shared motion primitives for the redesigned UI. */
+@keyframes cvfade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cvglow {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) translate(-16px, 14px);
+  }
+}
+
+@keyframes cvpop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cvsweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(370%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

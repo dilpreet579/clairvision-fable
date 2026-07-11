@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PublicEventProvider } from "@/components/public/PublicEventContext";
-import PublicEventNav from "@/components/public/PublicEventNav";
 import { resolveSlug } from "@/lib/api-client";
 import type { PublicEventSummary } from "@/lib/types";
 
@@ -65,8 +64,7 @@ export default function PublicEventLayout({
 
   return (
     <PublicEventProvider value={event}>
-      <PublicEventNav slug={event.slug} eventName={event.name} />
-      <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6">
         {children}
       </main>
     </PublicEventProvider>

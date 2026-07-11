@@ -53,7 +53,7 @@ export default function DashboardPage() {
       <div className="mt-4">
         {error && <p className="text-sm text-muted">{error}</p>}
         {!error && events === null && (
-          <ul className="divide-y divide-surface">
+          <ul className="divide-y divide-line">
             {[0, 1, 2].map((i) => (
               <li key={i} className="py-4">
                 <div className="cv-skeleton h-4 w-48 rounded-sm" />
@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted">No events yet.</p>
         )}
         {events !== null && events.length > 0 && (
-          <ul className="divide-y divide-surface">
+          <ul className="divide-y divide-line">
             {events.map((event) => (
               <li
                 key={event.id}

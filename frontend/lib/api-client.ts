@@ -4,7 +4,6 @@
 
 import * as mock from "./mock";
 import type {
-  ClusterPoint,
   DuplicateGroupRead,
   EventCreate,
   EventRead,
@@ -226,13 +225,6 @@ export function selectGroupImage(
 export function listFaces(eventId: string, imageId: string): Promise<FaceRead[]> {
   if (USE_MOCKS) return mock.mockListFaces(eventId, imageId);
   return request<FaceRead[]>(`/events/${eventId}/images/${imageId}/faces`);
-}
-
-// --- cluster ----------------------------------------------------------------
-
-export function getClusterPoints(eventId: string): Promise<ClusterPoint[]> {
-  if (USE_MOCKS) return mock.mockGetClusterPoints(eventId);
-  return request<ClusterPoint[]>(`/events/${eventId}/cluster`);
 }
 
 // --- search -----------------------------------------------------------------

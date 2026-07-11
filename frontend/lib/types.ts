@@ -112,16 +112,6 @@ export interface SearchResult {
   height: number | null;
 }
 
-// One image's position in the 2D UMAP projection of the event's CLIP
-// embeddings, from GET /events/{id}/cluster. x/y are raw UMAP coordinates
-// (arbitrary scale/range, can be negative).
-export interface ClusterPoint {
-  image_id: string;
-  x: number;
-  y: number;
-  duplicate_group_id: string | null;
-}
-
 // Paginated listing shape assumed for GET /events/{id}/images.
 export interface ImagePage {
   items: ImageRead[];

@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import DuplicateDrawer from "./DuplicateDrawer";
 import GallerySkeleton from "./GallerySkeleton";
 import ImageCard from "./ImageCard";
+import Lightbox from "./Lightbox";
 import { listImages } from "@/lib/api-client";
 import type { DuplicateGroupRead, ImageRead } from "@/lib/types";
 
@@ -11,11 +12,12 @@ const PAGE_SIZE = 24;
 
 export default function GalleryGrid({
   eventId,
-  searchPath,
+  onFaceSelect,
 }: {
   eventId: string;
-  /** Search-page route of the hosting tree, passed through to ImageCard. */
-  searchPath: string;
+  /** Tapping a face region in the grid or in the lightbox calls this —
+   * the page switches to the Search tab and runs the face search. */
+  onFaceSelect: (faceId: string) => void;
 }) {
   const [images, setImages] = useState<ImageRead[]>([]);
   const [page, setPage] = useState(0); // last loaded page
@@ -26,6 +28,7 @@ export default function GalleryGrid({
     groupId: string;
     imageId: string;
   } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const hasMore = total === null || images.length < total;
@@ -53,6 +56,7 @@ export default function GalleryGrid({
     setPage(0);
     setTotal(null);
     setExpandedGroup(null);
+    setLightboxIndex(null);
   }, [eventId]);
 
   useEffect(() => {
@@ -119,12 +123,13 @@ export default function GalleryGrid({
   return (
     <div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {images.map((image) => (
+        {images.map((image, index) => (
           <Fragment key={image.duplicate_group?.id ?? image.id}>
             <ImageCard
               eventId={eventId}
               image={image}
-              searchPath={searchPath}
+              onFaceSelect={onFaceSelect}
+              onOpenPhoto={() => setLightboxIndex(index)}
               onToggleDuplicates={handleToggleDuplicates}
               // Guard the null case: undefined === undefined would mark
               // every ungrouped image as "open" and pin its overlay on.
@@ -152,6 +157,27 @@ export default function GalleryGrid({
       )}
       {error && <p className="mt-4 text-sm text-muted">{error}</p>}
       <div ref={sentinelRef} aria-hidden />
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          eventId={eventId}
+          items={images.map((img) => ({
+            id: img.id,
+            duplicateCount: img.duplicate_group?.member_count,
+          }))}
+          index={lightboxIndex}
+          totalCount={total ?? images.length}
+          hasMore={hasMore}
+          loadingMore={loading}
+          onLoadMore={loadNext}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onFaceSelect={(faceId) => {
+            setLightboxIndex(null);
+            onFaceSelect(faceId);
+          }}
+        />
+      )}
     </div>
   );
 }

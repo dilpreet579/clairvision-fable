@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import type { PublicEventSummary } from "@/lib/types";
 
 // Filled once by the /e/[slug] layout after resolving the slug; the
-// gallery/search/cluster pages beneath read the event id from here so
+// gallery/search pages beneath read the event id from here so
 // every downstream call stays on the existing id-based endpoints.
 const PublicEventContext = createContext<PublicEventSummary | null>(null);
 

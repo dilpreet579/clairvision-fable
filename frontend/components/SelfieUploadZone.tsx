@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 
 /**
- * A simple dashed-border rectangle with one line of instruction text.
- * No icons, no illustrations.
+ * Centered dashed-border card: a serif invitation, one line of privacy
+ * copy, and two entry points into the same file input flow — upload from
+ * the library, or jump straight to the front camera on mobile.
  */
 export default function SelfieUploadZone({
   onFile,
@@ -13,7 +14,8 @@ export default function SelfieUploadZone({
   onFile: (file: File) => void;
   disabled?: boolean;
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
 
   function handleFiles(files: FileList | null) {
@@ -23,12 +25,6 @@ export default function SelfieUploadZone({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => inputRef.current?.click()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
-      }}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -39,17 +35,56 @@ export default function SelfieUploadZone({
         setDragging(false);
         handleFiles(e.dataTransfer.files);
       }}
-      className={`flex h-32 w-full cursor-pointer items-center justify-center border border-dashed transition-colors duration-fast ${
-        dragging ? "border-accent" : "border-muted/50 hover:border-muted"
+      className={`flex flex-col items-center gap-5 rounded-lg border border-dashed px-6 py-16 text-center transition-colors duration-fast ${
+        dragging ? "border-accent" : "border-line"
       }`}
     >
-      <p className="px-4 text-center text-sm text-muted">
-        Drop a selfie here, or tap to choose a photo of yourself.
-      </p>
+      <div>
+        <h2 className="font-serif text-2xl italic text-fg sm:text-[1.75rem]">
+          Find every photo of you
+        </h2>
+        <p className="mx-auto mt-3 max-w-[38ch] text-sm text-muted">
+          Nothing is stored — your selfie is matched and immediately
+          discarded.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => fileInputRef.current?.click()}
+          className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-colors duration-fast hover:bg-accentHover disabled:cursor-default disabled:opacity-50"
+        >
+          Upload a selfie
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => cameraInputRef.current?.click()}
+          className="rounded-full border border-line px-5 py-2.5 text-sm text-fg transition-colors duration-fast hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-50"
+        >
+          Use camera
+        </button>
+      </div>
+
+      <p className="text-xs text-muted2">or drag and drop a photo here</p>
+
+      {/* library / general picker — no capture attr */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
       {/* capture="user" jumps straight to the front camera on mobile;
           desktop browsers ignore it and open the normal file picker. */}
       <input
-        ref={inputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="user"
