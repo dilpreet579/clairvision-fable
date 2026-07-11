@@ -78,34 +78,55 @@ export default function PreviewGrid({ eventId }: { eventId: string }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div
+        className="grid gap-2"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
+      >
         {images.map((image) => (
-          <figure key={image.id} className="relative">
+          <figure key={image.id} className="group relative overflow-hidden rounded-sm">
             <img
               src={thumbnailUrl(eventId, image.id, 400)}
               alt=""
               loading="lazy"
-              className={`block aspect-[4/3] w-full object-cover transition-opacity duration-fast ${
-                image.hidden ? "opacity-30" : ""
+              className={`block aspect-square w-full object-cover transition-opacity duration-fast ${
+                image.hidden ? "opacity-25" : ""
               }`}
             />
-            <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/45 p-2">
-              <span className="text-xs text-fg/70">
+            {/* always-visible control bar */}
+            <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-2 py-1.5">
+              <span className="text-[10px] font-mono tracking-wide text-fg/60">
                 {image.hidden ? "Hidden" : ""}
               </span>
               <button
                 type="button"
                 disabled={busyId === image.id}
                 onClick={() => toggleHidden(image)}
-                className="text-xs text-accent transition-colors duration-fast hover:text-fg disabled:text-muted"
+                className={`text-[11px] transition-colors duration-fast disabled:text-muted ${
+                  image.hidden
+                    ? "text-accent hover:text-accentHover"
+                    : "text-muted hover:text-fg"
+                }`}
               >
-                {busyId === image.id ? "..." : image.hidden ? "Unhide" : "Hide"}
+                {busyId === image.id ? "…" : image.hidden ? "Unhide" : "Hide"}
               </button>
             </figcaption>
+            {/* hidden overlay badge */}
+            {image.hidden && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              >
+                <span className="rounded-full border border-line bg-bg/70 px-2 py-0.5 text-[10px] font-mono tracking-widest text-muted2 backdrop-blur-sm">
+                  HIDDEN
+                </span>
+              </div>
+            )}
           </figure>
         ))}
       </div>
-      {error && <p className="mt-4 text-sm text-muted">{error}</p>}
+
+      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
       {hasMore && (
         <button
           type="button"
@@ -113,7 +134,7 @@ export default function PreviewGrid({ eventId }: { eventId: string }) {
           onClick={() => void loadNext()}
           className="mt-6 text-sm text-accent transition-colors duration-fast hover:text-fg disabled:text-muted"
         >
-          {loading ? "Loading..." : "Load more"}
+          {loading ? "Loading…" : "Load more"}
         </button>
       )}
     </div>

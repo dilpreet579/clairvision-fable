@@ -4,8 +4,13 @@ import { useState } from "react";
 import { createEvent } from "@/lib/api-client";
 import type { EventRead } from "@/lib/types";
 
+const inputClass =
+  "w-full border-b border-line bg-transparent px-0 py-2 text-sm text-fg " +
+  "placeholder:text-muted focus:border-accent focus:outline-none " +
+  "transition-colors duration-fast";
+
 /**
- * Plain form: two inputs, one submit button. Status is inline text only.
+ * New-event form: name + source URL, solid amber submit pill.
  */
 export default function IngestForm({
   onCreated,
@@ -37,39 +42,53 @@ export default function IngestForm({
     }
   }
 
-  const inputClass =
-    "w-full border-b border-line bg-transparent px-0 py-2 text-sm text-fg " +
-    "placeholder:text-muted focus:border-accent focus:outline-none " +
-    "transition-colors duration-fast";
+  const canSubmit = !submitting && name.trim() && sourceUrl.trim();
 
   return (
     <form onSubmit={handleSubmit} className="max-w-md">
-      <div className="space-y-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Event name"
-          maxLength={200}
-          className={inputClass}
-        />
-        <input
-          type="url"
-          value={sourceUrl}
-          onChange={(e) => setSourceUrl(e.target.value)}
-          placeholder="Source URL"
-          maxLength={2000}
-          className={inputClass}
-        />
+      <div className="space-y-5">
+        <div>
+          <label className="block text-[11px] font-medium uppercase tracking-[0.1em] text-muted2 mb-1.5">
+            Event name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Arora Wedding — Jaipur"
+            maxLength={200}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium uppercase tracking-[0.1em] text-muted2 mb-1.5">
+            Source URL
+          </label>
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://…"
+            maxLength={2000}
+            className={inputClass}
+          />
+          <p className="mt-1.5 text-[11px] text-muted2">
+            A URL pointing at the photo collection — JSON manifest or HTML directory.
+          </p>
+        </div>
       </div>
+
       <button
         type="submit"
-        disabled={submitting || !name.trim() || !sourceUrl.trim()}
-        className="mt-5 text-sm text-accent transition-colors duration-fast hover:text-fg disabled:cursor-default disabled:text-muted"
+        disabled={!canSubmit}
+        className="mt-7 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-bg transition-colors duration-fast hover:bg-accentHover disabled:cursor-default disabled:opacity-50"
       >
-        {submitting ? "Submitting..." : "Submit event"}
+        {submitting ? "Submitting…" : "Create event"}
       </button>
-      {error && <p className="mt-3 text-sm text-muted">{error}</p>}
+
+      {error && (
+        <p className="mt-3 text-sm text-danger">{error}</p>
+      )}
     </form>
   );
 }

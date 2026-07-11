@@ -15,8 +15,8 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
 const POLL_MS = 2500;
 
 /**
- * Single line of pipeline status text. Polls the event while it is
- * pending/processing; the animated dot is the only loading affordance.
+ * Single-line pipeline status indicator with colored pill states.
+ * Polls while pending/processing; dot animation is the only motion.
  */
 export default function StatusLine({
   event,
@@ -48,29 +48,40 @@ export default function StatusLine({
   if (current.status === "ready") {
     const count = current.selected_image_count ?? 0;
     return (
-      <p className="text-sm text-muted">
-        Ready — {count.toLocaleString()} images curated.
-      </p>
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs text-accent">
+        <span
+          aria-hidden
+          className="h-1.5 w-1.5 rounded-full bg-accent"
+        />
+        Ready · {count.toLocaleString()} curated
+      </span>
     );
   }
 
   if (current.status === "failed") {
     return (
-      <p className="text-sm text-muted">
-        Failed — {current.error_message ?? "unknown error."}
-      </p>
+      <span
+        className="inline-flex max-w-[32ch] items-center gap-1.5 rounded-full border border-danger/30 bg-danger/10 px-2.5 py-0.5 text-xs text-danger"
+        title={current.error_message ?? undefined}
+      >
+        <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
+        <span className="truncate">
+          Failed
+          {current.error_message ? ` — ${current.error_message}` : ""}
+        </span>
+      </span>
     );
   }
 
   const label =
     current.status === "pending"
       ? "Queued"
-      : STAGE_LABELS[current.current_stage] ?? "Processing";
+      : (STAGE_LABELS[current.current_stage] ?? "Processing");
 
   return (
-    <p className="flex items-center gap-2 text-sm text-muted">
+    <span className="inline-flex items-center gap-2 text-xs text-muted">
       <span className="cv-dot" aria-hidden />
-      {label}...
-    </p>
+      {label}
+    </span>
   );
 }

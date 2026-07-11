@@ -16,10 +16,10 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`border-b pb-0.5 text-sm transition-colors duration-fast ${
+      className={`relative text-sm transition-colors duration-fast after:absolute after:-bottom-[1px] after:left-0 after:h-[1px] after:w-full after:rounded-full after:bg-accent after:transition-opacity after:duration-fast ${
         active
-          ? "border-fg text-fg"
-          : "border-transparent text-muted hover:text-fg"
+          ? "text-fg after:opacity-100"
+          : "text-muted after:opacity-0 hover:text-fg"
       }`}
     >
       {label}
@@ -46,11 +46,11 @@ export default function DashboardNav() {
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/dashboard"
-          className="font-serif text-lg italic tracking-wide text-fg"
+          className="font-serif text-lg italic tracking-wide text-fg transition-colors duration-fast hover:text-accent"
         >
           ClairVision
         </Link>
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-7">
           <NavLink
             href="/dashboard"
             label="Events"
