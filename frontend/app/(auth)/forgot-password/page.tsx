@@ -45,17 +45,24 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ animation: "cvfade 0.3s ease-out" }}>
       <h1 className="font-serif text-2xl text-fg">Reset your password</h1>
       <p className="mt-4 text-sm text-muted">
         Enter your organizer email and we&apos;ll send a reset link.
       </p>
-      <div className="mt-6">
+      <div className="mt-8">
+        <label
+          htmlFor="forgot-email"
+          className="block text-[11px] font-medium uppercase tracking-[0.1em] text-muted2 mb-1.5"
+        >
+          Email
+        </label>
         <input
+          id="forgot-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
+          placeholder="you@example.com"
           autoComplete="email"
           className={authInputClass}
         />
@@ -65,7 +72,7 @@ export default function ForgotPasswordPage() {
         disabled={submitting || !email.trim()}
         className={authButtonClass}
       >
-        {submitting ? "Sending..." : "Send reset link"}
+        {submitting ? "Sending…" : "Send reset link"}
       </button>
       <p className="mt-8 text-sm">
         <Link

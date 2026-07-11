@@ -66,27 +66,42 @@ function TokenPasswordFormInner({
     }
   }
 
+  const labelClass =
+    "block text-[11px] font-medium uppercase tracking-[0.1em] text-muted2 mb-1.5";
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ animation: "cvfade 0.3s ease-out" }}>
       <h1 className="font-serif text-2xl text-fg">{heading}</h1>
       <p className="mt-4 text-sm text-muted">{intro}</p>
-      <div className="mt-6 space-y-4">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={`New password (min ${MIN_PASSWORD_LENGTH} characters)`}
-          autoComplete="new-password"
-          className={authInputClass}
-        />
-        <input
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder="Confirm password"
-          autoComplete="new-password"
-          className={authInputClass}
-        />
+      <div className="mt-8 space-y-5">
+        <div>
+          <label htmlFor="tp-password" className={labelClass}>
+            New password
+          </label>
+          <input
+            id="tp-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={`Min ${MIN_PASSWORD_LENGTH} characters`}
+            autoComplete="new-password"
+            className={authInputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="tp-confirm" className={labelClass}>
+            Confirm password
+          </label>
+          <input
+            id="tp-confirm"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="Re-enter password"
+            autoComplete="new-password"
+            className={authInputClass}
+          />
+        </div>
       </div>
       {tooShort && (
         <p className={`mt-3 text-sm ${authErrorClass}`}>
@@ -97,7 +112,7 @@ function TokenPasswordFormInner({
         <p className={`mt-3 text-sm ${authErrorClass}`}>Passwords don&apos;t match.</p>
       )}
       <button type="submit" disabled={!ready} className={authButtonClass}>
-        {submitting ? submittingLabel : submitLabel}
+        {submitting ? submittingLabel.replace('...', '…') : submitLabel}
       </button>
       {error && <p className={`mt-3 text-sm ${authErrorClass}`}>{error}</p>}
       <p className="mt-8 text-sm">
