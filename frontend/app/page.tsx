@@ -75,7 +75,7 @@ export default function HomePage() {
               560×440 positioned top-right */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-[70px] right-[-60px] -z-10"
+            className="pointer-events-none absolute -top-[70px] right-[-60px]"
             style={{
               width: 560,
               height: 440,
@@ -87,7 +87,7 @@ export default function HomePage() {
           {/* Secondary orb — smaller, offset phase, drifts in opposite arc */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-[20px] right-[60px] -z-10"
+            className="pointer-events-none absolute -top-[20px] right-[60px]"
             style={{
               width: 340,
               height: 340,
@@ -99,7 +99,7 @@ export default function HomePage() {
           {/* Wide halo — barely moves, gives the ambient base warmth */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -top-[120px] right-[-160px] -z-10"
+            className="pointer-events-none absolute -top-[120px] right-[-160px]"
             style={{
               width: 720,
               height: 600,
