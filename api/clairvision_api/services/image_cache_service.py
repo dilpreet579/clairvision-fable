@@ -16,6 +16,7 @@ from clairvision_shared.db.models import Event, Image
 from clairvision_shared.io.image_utils import (
     ImageDecodeError,
     decode_image,
+    decode_image_scaled,
     encode_jpeg,
     make_thumbnail,
 )
@@ -91,6 +92,11 @@ def get_thumbnail(
     if cached is not None:
         return cached
     orig = get_original(db, r, event_id, image_id)
-    thumb = make_thumbnail(decode_image(orig), size)
+    # Scaled decode, not decode_image: the cached "original" here is
+    # already our own re-encoded JPEG (from _fetch_and_cache_original),
+    # but it's still full-resolution — decoding it in full just to shrink
+    # it to `size` is exactly the memory spike that OOM-killed the API
+    # under a real gallery's concurrent thumbnail load.
+    thumb = make_thumbnail(decode_image_scaled(orig, size), size)
     r.setex(key, get_settings().image_cache_ttl_thumbnail_seconds, thumb)
     return thumb
