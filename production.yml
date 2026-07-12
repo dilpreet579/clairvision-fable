@@ -1,0 +1,50 @@
+# Production overrides, layered on top of docker-compose.yml — never used
+# alone:
+#
+#   docker compose -f docker-compose.yml -f production.yml pull api
+#   docker compose -f docker-compose.yml -f production.yml up -d db redis
+#   docker compose -f docker-compose.yml -f production.yml run --rm api alembic upgrade head
+#   docker compose -f docker-compose.yml -f production.yml up -d api caddy
+#
+# db, redis, api, and caddy run here. The frontend deploys separately on
+# Vercel; the pipeline worker is a short-lived instance spun up on its own
+# (see the AWS feasibility memo) — neither belongs in this always-on stack.
+# db/redis keep the base file's 127.0.0.1-only port binding unchanged —
+# nothing outside this host ever needs to reach them directly.
+services:
+  db:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  api:
+    # The base file builds this from source; production pulls the image
+    # the deploy workflow already built and pushed to GHCR instead — the
+    # compose files are copied to the server on their own, without the
+    # rest of the source tree a local build would need.
+    image: ghcr.io/dilpreet579/clairvision-fable-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    # Not published to the host at all — only Caddy is internet-facing.
+    # Other containers still reach it at http://api:8000 over the compose
+    # network regardless. `!override` clears the base file's
+    # 127.0.0.1:8000:8000 binding rather than adding to it (Compose
+    # concatenates list fields by default).
+    ports: !override []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:

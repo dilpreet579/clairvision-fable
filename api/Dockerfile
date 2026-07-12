@@ -22,4 +22,10 @@ RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/c
 
 # FAISS indexes are volume-mounted read-only at /app/indexes (Phase 7).
 
+# Migrations aren't run from the host in production (unlike local dev) —
+# the deploy pipeline runs `alembic upgrade head` inside this image instead,
+# so alembic.ini and the migration scripts need to be present here too.
+COPY alembic.ini /app/alembic.ini
+COPY infra/postgres/migrations/ /app/infra/postgres/migrations/
+
 CMD ["uvicorn", "clairvision_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

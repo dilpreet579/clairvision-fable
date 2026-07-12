@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# One-time EC2 provisioning for the ClairVision always-on host (db, redis,
+# api, caddy — see production.yml). Review every value below before
+# running — this creates real, billed AWS resources. Requires the `aws`
+# CLI authenticated (`aws sts get-caller-identity` should succeed).
+#
+# Re-running this script is NOT idempotent for run-instances — it will
+# launch a second instance. It's meant as a record of how the current
+# instance was created, and a starting point if it's ever rebuilt.
+set -euo pipefail
+
+REGION="ap-south-1"                # Mumbai
+KEY_NAME="clairvision-deploy"
+INSTANCE_TYPE="t3.micro"           # matches the free-tier plan
+MY_IP="$(curl -s https://checkip.amazonaws.com)/32"
+
+AMI_ID=$(aws ec2 describe-images --owners 099720109477 --region "$REGION" \
+  --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
+            "Name=state,Values=available" \
+  --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text)
+
+echo "Your IP for SSH allowlisting: $MY_IP"
+echo "AMI: $AMI_ID"
+
+# ── Key pair (only if you don't already have one) ──────────────────────
+if ! aws ec2 describe-key-pairs --key-names "$KEY_NAME" --region "$REGION" >/dev/null 2>&1; then
+  aws ec2 create-key-pair --key-name "$KEY_NAME" --region "$REGION" \
+    --query 'KeyMaterial' --output text > "${KEY_NAME}.pem"
+  chmod 400 "${KEY_NAME}.pem"
+  echo "Saved ${KEY_NAME}.pem — this PEM's contents go into the EC2_SSH_KEY secret."
+fi
+
+# ── Security group: SSH from you only, HTTP/HTTPS from anywhere ────────
+# Only Caddy (80/443) is internet-facing — api itself has no published
+# port in production.yml, reached only via Caddy's reverse proxy over the
+# compose network.
+SG_ID=$(aws ec2 create-security-group \
+  --group-name clairvision-web \
+  --description "ClairVision always-on web host" \
+  --region "$REGION" --query 'GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
+  --protocol tcp --port 22 --cidr "$MY_IP"
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
+  --protocol tcp --port 80 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+# ── User data: Docker + Compose plugin, deploy directory ───────────────
+cat > /tmp/clairvision-userdata.sh <<'EOF'
+#!/bin/bash
+set -e
+apt-get update
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+usermod -aG docker ubuntu
+mkdir -p /opt/clairvision
+chown ubuntu:ubuntu /opt/clairvision
+EOF
+
+# ── Launch ───────────────────────────────────────────────────────────
+INSTANCE_ID=$(aws ec2 run-instances \
+  --image-id "$AMI_ID" \
+  --instance-type "$INSTANCE_TYPE" \
+  --key-name "$KEY_NAME" \
+  --security-group-ids "$SG_ID" \
+  --user-data file:///tmp/clairvision-userdata.sh \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clairvision-web}]' \
+  --region "$REGION" \
+  --query 'Instances[0].InstanceId' --output text)
+
+echo "Launched $INSTANCE_ID — waiting for it to be running..."
+aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
+
+PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+
+echo ""
+echo "Instance up: $PUBLIC_IP"
+echo "  -> Point api.percepta.codes (A record) at this IP"
+echo "  -> EC2_HOST secret:     $PUBLIC_IP"
+echo "  -> EC2_SSH_USER secret: ubuntu"
+echo "  -> EC2_SSH_KEY secret:  contents of ${KEY_NAME}.pem"
+echo ""
+echo "Give it ~30-60s for the user-data script to finish installing Docker"
+echo "before the first deploy. Caddy needs the DNS record live and"
+echo "propagated before it can get a Let's Encrypt cert on first boot."
