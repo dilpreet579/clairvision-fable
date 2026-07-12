@@ -1,5 +1,14 @@
 import Link from "next/link";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 // Chromeless shell for login / forgot-password / reset-password /
 // accept-invite: wordmark only, narrow column, no nav.
 export default function AuthLayout({

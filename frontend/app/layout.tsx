@@ -19,8 +19,35 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "ClairVision",
+  metadataBase: new URL(
+    process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  ),
+  title: {
+    template: "%s | ClairVision",
+    default: "ClairVision",
+  },
   description: "AI-curated event photo galleries",
+  openGraph: {
+    title: "ClairVision",
+    description: "AI-curated event photo galleries",
+    url: "/",
+    siteName: "ClairVision",
+    images: [
+      {
+        url: "/og-img.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ClairVision",
+    description: "AI-curated event photo galleries",
+    images: ["/og-img.png"],
+  },
 };
 
 // No global nav here — the public event page (app/e/[slug]/page.tsx,
