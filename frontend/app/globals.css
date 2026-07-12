@@ -23,6 +23,7 @@ body {
 body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* Minimal animated dot — the only loading affordance allowed on ingestion. */

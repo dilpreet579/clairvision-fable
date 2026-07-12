@@ -69,7 +69,7 @@ export default function HomePage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
         {/* hero */}
-        <section className="relative overflow-hidden pt-16 sm:pt-24">
+        <section className="relative pt-16 sm:pt-24">
           {/* ── Glow system: three layered amber orbs ── */}
           {/* Primary orb — prototype-exact: closest-side gradient, no blur,
               560×440 positioned top-right */}
