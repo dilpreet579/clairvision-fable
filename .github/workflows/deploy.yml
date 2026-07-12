@@ -97,4 +97,11 @@ jobs:
             docker compose -f docker-compose.yml -f production.yml run --rm api \
               alembic upgrade head
             docker compose -f docker-compose.yml -f production.yml up -d api caddy
-            docker image prune -f
+            # -a (not just -f): every deploy tags a new, unique image (the
+            # short SHA), so old deploys' tags are never "dangling" — plain
+            # `docker image prune -f` never reclaimed them and the t3.micro's
+            # 7.6GB disk filled up after a handful of deploys. -a removes
+            # every image not referenced by a running container, tagged or
+            # not, which is exactly the old api tags plus any real dangling
+            # layers.
+            docker image prune -af
