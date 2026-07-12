@@ -26,7 +26,21 @@ RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/c
     && pip install -e /app/pipeline \
     && pip install --no-deps "facenet-pytorch>=2.6"
 
-# Warm the model registry at build time so weights (NIMA baked in above,
+# pipeline/weights/*.pth is gitignored (a 58MB binary — local dev relies on
+# a runtime bind-mount from disk, never a git-tracked file), so the COPY
+# above only brought in weights/README.md; nima.pth doesn't exist in a CI
+# checkout. Fetch the public source checkpoint and convert it at build
+# time instead, using the exact reproducible procedure weights/README.md
+# already documents.
+RUN python3 -c "\
+import requests; \
+from clairvision_pipeline.models.nima_model import convert_pyiqa_checkpoint; \
+r = requests.get('https://huggingface.co/chaofengc/IQA-PyTorch-Weights/resolve/main/NIMA_VGG16_ava-dc4e8265.pth'); \
+r.raise_for_status(); \
+open('/tmp/nima_raw.pth', 'wb').write(r.content); \
+convert_pyiqa_checkpoint('/tmp/nima_raw.pth', '/app/weights/nima.pth')"
+
+# Warm the model registry at build time so weights (NIMA converted above,
 # CLIP/MTCNN/ArcFace downloaded here) are already resident in the image —
 # a bare EC2 `docker run` has no repo checkout / bind-mount to fall back on,
 # and the first real task must not pay a cold-download tax.
