@@ -1,6 +1,3 @@
-import threading
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -8,22 +5,9 @@ from sqlalchemy import text
 from clairvision_shared.config import get_settings
 
 from .deps import get_redis
-from .routers import auth, cluster, events, gallery, images, organizers, public, search
+from .routers import auth, events, gallery, images, organizers, public, search
 
-
-def _warm_umap() -> None:
-    # numba JIT-compiles UMAP on first import (~1 min cold). Warming in a
-    # daemon thread at boot means no user request ever pays that cost.
-    import umap  # noqa: F401
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    threading.Thread(target=_warm_umap, daemon=True).start()
-    yield
-
-
-app = FastAPI(title="ClairVision API", lifespan=lifespan)
+app = FastAPI(title="ClairVision API")
 
 settings = get_settings()
 app.add_middleware(
@@ -45,7 +29,6 @@ app.include_router(events.router)
 app.include_router(gallery.router)
 app.include_router(images.router)
 app.include_router(search.router)
-app.include_router(cluster.router)
 
 
 @app.get("/healthz")

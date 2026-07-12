@@ -71,15 +71,14 @@ def get_original(
 
 
 def purge_event_cache(r: redis.Redis, event_id: uuid.UUID) -> int:
-    """Delete every cached image byte-string AND cluster projection for an
-    event (used on event delete). scan_iter, not blocking KEYS. Returns the
-    number of keys removed."""
+    """Delete every cached image byte-string for an event (used on event
+    delete). scan_iter, not blocking KEYS. Returns the number of keys
+    removed."""
     removed = 0
     pipe = r.pipeline()
-    for pattern in (f"img:{event_id}:*", f"cluster:{event_id}:*"):
-        for key in r.scan_iter(match=pattern, count=500):
-            pipe.delete(key)
-            removed += 1
+    for key in r.scan_iter(match=f"img:{event_id}:*", count=500):
+        pipe.delete(key)
+        removed += 1
     pipe.execute()
     return removed
 

@@ -169,7 +169,7 @@ class ClipEmbedding(Base):
     image_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("images.id", ondelete="CASCADE"), nullable=False, unique=True
     )
-    # Denormalized: per-event FAISS/UMAP rebuilds read by event_id without a join.
+    # Denormalized: per-event FAISS rebuilds read by event_id without a join.
     event_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True
     )

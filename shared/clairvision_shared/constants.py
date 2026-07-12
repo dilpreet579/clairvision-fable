@@ -24,6 +24,3 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 # Server-side cap on gallery pagination page size.
 MAX_PAGE_SIZE = 100
 
-# Cached UMAP projections live long (recomputed only when the event's
-# embedding count changes — the cache key includes it).
-CLUSTER_CACHE_TTL_SECONDS = 7 * 24 * 3600

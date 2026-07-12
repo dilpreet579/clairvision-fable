@@ -25,7 +25,7 @@ to add/edit.
 - [dev-workflow-conventions](lessons/dev-workflow-conventions.md) — confirmed working agreements: venv for iteration + Docker as truth, commit per verified phase, SOURCE_FETCH_ALLOW_PRIVATE for local test sources.
 - [security-tests-need-prod-posture](lessons/security-tests-need-prod-posture.md) — the dev SSRF flag legitimately opens the gate being tested; security checks must run with dev flags off.
 - [compose-env-file-optional](lessons/compose-env-file-optional.md) — `env_file: .env` breaks every compose command on fresh clones; use the `required: false` long-form.
-- [jit-heavy-imports-need-boot-warmup](lessons/jit-heavy-imports-need-boot-warmup.md) — numba JIT makes the first UMAP request cost ~70s; warm the import in a daemon thread at API boot.
+- [frontend-redesign-can-orphan-backend-features](lessons/frontend-redesign-can-orphan-backend-features.md) — the Phase 9 cluster-map UI was deleted in a later frontend redesign but its backend (UMAP endpoint, deps) was never removed; grep the frontend for a feature's consumer before assuming a backend route is still live.
 - [celery-prefork-multiplies-model-memory](lessons/celery-prefork-multiplies-model-memory.md) — default prefork spawned 8 children each loading all models; pin --concurrency=1, scale via containers.
 - [next-public-env-is-baked-at-build](lessons/next-public-env-is-baked-at-build.md) — NEXT_PUBLIC_* inlines at build; without Docker build args the frontend image ships in mock mode.
 - [laplacian-needs-resolution-normalization](lessons/laplacian-needs-resolution-normalization.md) — full-res DSLR photos scored 5–80 vs the 80 threshold (everything rejected); normalize to a 1024px edge, then recalibrate from data.

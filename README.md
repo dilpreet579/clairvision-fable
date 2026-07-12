@@ -3,8 +3,7 @@
 AI-powered event photo curation. A photographer submits an event (name + source URL of a
 remote image collection); a three-stage ML pipeline filters blurry shots, collapses
 near-duplicate bursts to the single best frame, and builds a face-identity index — then a
-web gallery serves the curated results with instant face search and a CLIP-embedding
-cluster map.
+web gallery serves the curated results with instant face search.
 
 **Architecture**: a GPU-bound batch pipeline (Celery worker) fully decoupled from a
 CPU-only always-on web stack (FastAPI + Next.js). Original images are never stored on
@@ -19,8 +18,8 @@ search accelerators).
 ## Status
 
 All spec features implemented and verified: 3-stage ML pipeline, gallery with
-duplicate-group override, face search (selfie upload + click-a-face), cluster
-visualization, and the full containerized stack.
+duplicate-group override, face search (selfie upload + click-a-face), and the
+full containerized stack.
 
 ## Setup
 

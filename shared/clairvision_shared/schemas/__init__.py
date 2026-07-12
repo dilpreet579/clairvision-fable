@@ -1,4 +1,3 @@
-from .cluster import ClusterPoint
 from .event import EventCreate, EventRead, EventUpdate, PublicEventSummary
 from .face import FaceRead, SearchResult
 from .image import DuplicateGroupRead, DuplicateGroupSummary, ImageRead
@@ -12,7 +11,6 @@ from .organizer import (
 )
 
 __all__ = [
-    "ClusterPoint",
     "EventCreate",
     "EventRead",
     "EventUpdate",
