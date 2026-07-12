@@ -1,0 +1,134 @@
+name: Pipeline VM safety net
+
+# Hard cost ceiling for the on-demand pipeline EC2 instance, independent of
+# that instance's own idle-watchdog logic.
+#
+# The pipeline VM (see pipeline/clairvision_pipeline/idle_watchdog.py) is
+# supposed to notice when it has gone idle and terminate itself. This
+# workflow exists for when that fails to fire: a stuck task that never lets
+# the queue drain, a watchdog process that crashed, a VM that came up but
+# never got as far as starting the watchdog, etc. This is a
+# budget-constrained side project running on a $100 AWS credit — an
+# instance silently left running is a real risk, not a theoretical one.
+#
+# Runs on its own schedule from GitHub's infrastructure, not from anything
+# on the pipeline VM itself, so it keeps working even if the VM (and
+# whatever is on it) is the thing that's broken. Deliberately dumb:
+# age-only, no attempt to judge whether the instance is "legitimately"
+# still busy. If the idle-watchdog is doing its job, this never finds
+# anything to terminate; if it isn't, uptime past the cutoff is reason
+# enough on its own.
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+    inputs:
+      max_age_minutes:
+        description: >-
+          Overrides the normal 120-minute cutoff, for manual testing only
+          (e.g. set to 0 to force-check against a freshly launched
+          instance). The scheduled trigger always uses the 120-minute
+          default below — this input is only read on a manual run.
+        type: string
+        default: "120"
+      dry_run:
+        description: >-
+          Log what WOULD be terminated without actually calling
+          terminate-instances. Use this before trusting a change to this
+          workflow, or before running a manual sweep against real
+          instances.
+        type: boolean
+        default: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      # Narrowly-scoped IAM *user* (not the web/pipeline VMs' own
+      # instance-role credentials) — this job runs on GitHub's runners,
+      # outside AWS, so there's no instance-metadata credential chain to
+      # pull from here the way the always-on API does. The user behind
+      # these keys can only describe and terminate EC2 instances, and the
+      # terminate permission is condition-scoped to
+      # ec2:ResourceTag/Role=clairvision-pipeline — these keys are useless
+      # against the always-on web VM or anything else in the account even
+      # if they leak.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_SAFETY_NET_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SAFETY_NET_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      # Plain AWS CLI + bash rather than a marketplace action — this is a
+      # handful of describe/terminate calls with some date arithmetic, not
+      # worth pulling in a dependency for (same call ubuntu-latest's GNU
+      # `date` makes this an easy option).
+      - name: Find and terminate stale pipeline VMs
+        run: |
+          set -euo pipefail
+
+          # The schedule trigger always uses the standard 120-minute
+          # ceiling; only a manual workflow_dispatch run can override it,
+          # and only for that one run.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MAX_AGE_MINUTES="${{ github.event.inputs.max_age_minutes }}"
+            DRY_RUN="${{ github.event.inputs.dry_run }}"
+          else
+            MAX_AGE_MINUTES=120
+            DRY_RUN=false
+          fi
+
+          echo "Cutoff: ${MAX_AGE_MINUTES} minute(s), dry_run=${DRY_RUN}"
+
+          # Only ever looks at instances tagged as pipeline workers —
+          # never touches the always-on web VM or anything else in the
+          # account, regardless of state or age.
+          INSTANCES=$(aws ec2 describe-instances \
+            --filters "Name=tag:Role,Values=clairvision-pipeline" \
+                      "Name=instance-state-name,Values=running,pending" \
+            --query 'Reservations[].Instances[].[InstanceId,LaunchTime]' \
+            --output text)
+
+          if [ -z "$INSTANCES" ]; then
+            echo "No pipeline VMs running or pending — nothing to check."
+            exit 0
+          fi
+
+          NOW_EPOCH=$(date -u +%s)
+          FAILED=0
+
+          # --output text tab-separates [InstanceId, LaunchTime] per
+          # instance, one line each, across every matching reservation.
+          while read -r INSTANCE_ID LAUNCH_TIME; do
+            [ -z "$INSTANCE_ID" ] && continue
+
+            # LaunchTime comes back as ISO8601 UTC (e.g.
+            # 2026-07-12T08:15:23+00:00) — GNU date on ubuntu-latest
+            # parses that natively via -d.
+            LAUNCH_EPOCH=$(date -u -d "$LAUNCH_TIME" +%s)
+            AGE_MINUTES=$(( (NOW_EPOCH - LAUNCH_EPOCH) / 60 ))
+
+            if [ "$AGE_MINUTES" -le "$MAX_AGE_MINUTES" ]; then
+              echo "KEEP  ${INSTANCE_ID}: age ${AGE_MINUTES}m <= ${MAX_AGE_MINUTES}m cutoff"
+              continue
+            fi
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[DRY RUN] ${INSTANCE_ID}: age ${AGE_MINUTES}m > ${MAX_AGE_MINUTES}m cutoff — would terminate"
+              continue
+            fi
+
+            if aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" >/dev/null; then
+              echo "TERMINATE ${INSTANCE_ID}: age ${AGE_MINUTES}m > ${MAX_AGE_MINUTES}m cutoff — terminated"
+            else
+              # Don't let one bad instance ID abort the sweep of the
+              # others — but do fail the job afterwards so a real problem
+              # (e.g. the IAM condition rejecting the call) surfaces
+              # instead of going silently unnoticed.
+              echo "ERROR ${INSTANCE_ID}: age ${AGE_MINUTES}m > ${MAX_AGE_MINUTES}m cutoff — terminate-instances call failed"
+              FAILED=1
+            fi
+          done <<< "$INSTANCES"
+
+          exit "$FAILED"
