@@ -17,9 +17,14 @@ dependencies = [
     "opencv-python-headless>=4.9",
     "requests>=2.31",
     "resend>=2.0",
+    "tqdm>=4.66",
 ]
 # facenet-pytorch is deliberately NOT listed (torch<2.3 pin) — install
-# with --no-deps; see lessons/facenet-pytorch-needs-no-deps.md.
+# with --no-deps; see lessons/facenet-pytorch-needs-no-deps.md. tqdm IS
+# listed here despite that, though: facenet_pytorch imports it at module
+# load time (models/utils/download.py, for a download helper this app
+# never calls), so --no-deps leaves it missing and search_by_upload
+# 500s on first use. No conflicting pins, safe to install normally.
 
 [build-system]
 requires = ["setuptools>=68"]
