@@ -96,5 +96,5 @@ jobs:
             docker compose -f docker-compose.yml -f production.yml up -d db redis
             docker compose -f docker-compose.yml -f production.yml run --rm api \
               alembic upgrade head
-            docker compose -f docker-compose.yml -f production.yml up -d api
+            docker compose -f docker-compose.yml -f production.yml up -d api caddy
             docker image prune -f
