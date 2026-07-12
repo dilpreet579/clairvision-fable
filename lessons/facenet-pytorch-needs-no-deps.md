@@ -16,3 +16,17 @@ facenet-pytorch with `--no-deps`. It is deliberately absent from
 `pipeline/Dockerfile` installs it as a separate `--no-deps` step, and `requests`
 (its one non-covered runtime need) is a regular pipeline dependency. Revisit when
 facenet-pytorch relaxes its torch pin.
+
+**Update (2026-07-12)**: `--no-deps` also silently drops `tqdm`, which
+`facenet_pytorch/__init__.py` imports unconditionally at module load time
+(for a download helper that's never actually called here) — not just a
+"real runtime need" like torch/numpy, but a bare import-time requirement.
+The pipeline image never hit this because something else in its larger
+dependency set pulls tqdm in transitively; the API's leaner dependency set
+didn't, and `search_by_upload` 500'd with `ModuleNotFoundError: No module
+named 'tqdm'` on first real use in production. Fixed by adding
+`tqdm>=4.66` as a normal dependency (installed without `--no-deps`) in
+`api/pyproject.toml` — it has no conflicting pins, so it's always safe to
+install directly.
+Any environment that imports `facenet_pytorch` needs tqdm present, not
+just facenet-pytorch's own listed runtime deps.
