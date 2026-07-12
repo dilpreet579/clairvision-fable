@@ -5,6 +5,27 @@ why it's needed, and a rough shape of the fix. Maintained by Claude during
 development; humans welcome to add/edit. Move an entry out (delete it) once
 it's actually built — this file tracks what's *missing*, not a changelog.
 
+## Production database backups
+
+The prod Postgres data (`postgres_data` volume) lives only on the single
+`api.percepta.codes` EC2 instance's disk — deploys never touch it, so
+redeploys are safe, but there's no backup or snapshot of any kind. If that
+instance is ever terminated or its disk corrupted, everything (organizers,
+events, images, faces) is gone with no recovery path.
+
+**Why it's needed:** single point of failure with zero redundancy on
+customer/organizer data, for a cost that's low relative to the risk.
+
+**Rough shape:**
+- Simplest: a cron/systemd timer on the host running nightly
+  `pg_dump | gzip` uploaded to S3 (or even just rotated on local disk as a
+  stopgap), a few dollars/month for the S3 side.
+- Better: EBS snapshot schedule via AWS Backup or a scheduled Lambda —
+  captures the whole volume (Postgres + FAISS indexes) without needing
+  app-level dump logic.
+- Either way, needs a documented restore procedure, not just the backup
+  itself — an untested backup is not a backup.
+
 ## Organizer per-face removal
 
 Right now there's no way for an organizer to remove a single false-positive
