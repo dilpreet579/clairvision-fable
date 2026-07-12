@@ -115,6 +115,19 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_address: str = "ClairVision <noreply@example.com>"
 
+    # ── AWS / pipeline VM automation ──
+    aws_region: str = "ap-south-1"
+    s3_faiss_bucket: str = ""
+    pipeline_instance_type: str = "c7i-flex.large"
+    pipeline_security_group_id: str = ""
+    pipeline_instance_profile_name: str = "clairvision-pipeline-profile"
+    pipeline_key_name: str = "clairvision-deploy"
+    pipeline_subnet_id: str = ""
+    pipeline_ghcr_image: str = "ghcr.io/dilpreet579/clairvision-fable-pipeline:latest"
+    pipeline_max_age_minutes: int = 120
+    pipeline_idle_grace_seconds: int = 300
+    pipeline_idle_poll_seconds: int = 60
+
     @property
     def database_url(self) -> str:
         return (
