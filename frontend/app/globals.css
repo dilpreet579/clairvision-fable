@@ -85,6 +85,21 @@ body {
   }
 }
 
+@keyframes cvglow2 {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1.05) translate(0, 0);
+  }
+  33% {
+    opacity: 0.7;
+    transform: scale(0.95) translate(22px, -18px);
+  }
+  66% {
+    opacity: 0.55;
+    transform: scale(1.08) translate(-10px, 20px);
+  }
+}
+
 @keyframes cvpop {
   from {
     opacity: 0;

@@ -70,13 +70,42 @@ export default function HomePage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
         {/* hero */}
         <section className="relative overflow-hidden pt-16 sm:pt-24">
+          {/* ── Glow system: three layered amber orbs ── */}
+          {/* Primary orb — prototype-exact: closest-side gradient, no blur,
+              560×440 positioned top-right */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-24 -top-16 -z-10 h-[440px] w-[440px] rounded-full blur-3xl"
+            className="pointer-events-none absolute -top-[70px] right-[-60px] -z-10"
             style={{
+              width: 560,
+              height: 440,
               background:
-                "radial-gradient(circle, rgba(217,160,91,0.14), transparent 70%)",
+                "radial-gradient(closest-side, rgba(217,160,91,0.16), rgba(217,160,91,0) 72%)",
               animation: "cvglow 9s ease-in-out infinite",
+            }}
+          />
+          {/* Secondary orb — smaller, offset phase, drifts in opposite arc */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-[20px] right-[60px] -z-10"
+            style={{
+              width: 340,
+              height: 340,
+              background:
+                "radial-gradient(closest-side, rgba(217,160,91,0.10), rgba(217,160,91,0) 68%)",
+              animation: "cvglow2 13s ease-in-out infinite",
+            }}
+          />
+          {/* Wide halo — barely moves, gives the ambient base warmth */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-[120px] right-[-160px] -z-10"
+            style={{
+              width: 720,
+              height: 600,
+              background:
+                "radial-gradient(closest-side, rgba(217,160,91,0.055), rgba(217,160,91,0) 65%)",
+              animation: "cvglow 22s ease-in-out infinite reverse",
             }}
           />
           <h1 className="max-w-[14ch] font-serif text-[clamp(2.5rem,6vw,3.625rem)] leading-[1.05] text-fg">
