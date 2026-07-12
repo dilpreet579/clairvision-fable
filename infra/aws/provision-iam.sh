@@ -72,7 +72,10 @@ WEB_POLICY=$(cat <<JSON
     {
       "Sid": "LaunchAndInspectPipelineVM",
       "Effect": "Allow",
-      "Action": ["ec2:RunInstances", "ec2:DescribeInstances", "ec2:CreateTags"],
+      "Action": [
+        "ec2:RunInstances", "ec2:DescribeInstances", "ec2:CreateTags",
+        "ec2:DescribeImages"
+      ],
       "Resource": "*",
       "Condition": {"StringEquals": {"aws:RequestedRegion": "${REGION}"}}
     },
