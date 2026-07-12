@@ -77,6 +77,13 @@ def ensure_pipeline_worker_running() -> None:
             MinCount=1,
             MaxCount=1,
             UserData=_build_user_data(settings),
+            # Default hop-limit (1) only reaches IMDS from the host itself —
+            # every boto3 call this instance makes (S3 upload, self-terminate)
+            # happens inside standalone-entrypoint.sh's Docker container, one
+            # network hop further out, and would otherwise time out trying to
+            # fetch the instance role's credentials. Learned the hard way on
+            # the web VM's own api container.
+            MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2},
             TagSpecifications=[
                 {
                     "ResourceType": "instance",

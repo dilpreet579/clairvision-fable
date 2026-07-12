@@ -76,8 +76,14 @@ INSTANCE_ID=$(aws ec2 run-instances \
   --security-group-ids "$SG_ID" \
   --user-data file:///tmp/clairvision-userdata.sh \
   --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=clairvision-web}]' \
+  --metadata-options HttpTokens=required,HttpPutResponseHopLimit=2 \
   --region "$REGION" \
   --query 'Instances[0].InstanceId' --output text)
+# Hop-limit 2, not the default 1: the api container is one network hop
+# further from 169.254.169.254 than the host itself, and any boto3 call
+# it makes (launching the pipeline VM, reading S3) needs to reach IMDS for
+# the instance role's credentials. Discovered by a live timeout the first
+# time this mattered — see pipeline_vm_service.py's matching comment.
 
 echo "Launched $INSTANCE_ID — waiting for it to be running..."
 aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
