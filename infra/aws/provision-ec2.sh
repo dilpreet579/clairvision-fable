@@ -12,14 +12,12 @@ set -euo pipefail
 REGION="ap-south-1"                # Mumbai
 KEY_NAME="clairvision-deploy"
 INSTANCE_TYPE="t3.micro"           # matches the free-tier plan
-MY_IP="$(curl -s https://checkip.amazonaws.com)/32"
 
 AMI_ID=$(aws ec2 describe-images --owners 099720109477 --region "$REGION" \
   --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
             "Name=state,Values=available" \
   --query 'sort_by(Images,&CreationDate)[-1].ImageId' --output text)
 
-echo "Your IP for SSH allowlisting: $MY_IP"
 echo "AMI: $AMI_ID"
 
 # ── Key pair (only if you don't already have one) ──────────────────────
@@ -30,17 +28,22 @@ if ! aws ec2 describe-key-pairs --key-names "$KEY_NAME" --region "$REGION" >/dev
   echo "Saved ${KEY_NAME}.pem — this PEM's contents go into the EC2_SSH_KEY secret."
 fi
 
-# ── Security group: SSH from you only, HTTP/HTTPS from anywhere ────────
-# Only Caddy (80/443) is internet-facing — api itself has no published
-# port in production.yml, reached only via Caddy's reverse proxy over the
-# compose network.
+# ── Security group: SSH, HTTP/HTTPS all from anywhere ───────────────────
+# Only Caddy (80/443) is internet-facing for real traffic — api itself has
+# no published port in production.yml, reached only via Caddy's reverse
+# proxy over the compose network. SSH (22) is open to 0.0.0.0/0 rather
+# than a single IP because deploy.yml's ssh-action connects from GitHub
+# Actions' runner IPs, which aren't a small enough published range to
+# allowlist narrowly (tried $MY_IP-only first; every deploy timed out).
+# Security rests on key-only auth (password auth is off by default on
+# this AMI), not on the source IP.
 SG_ID=$(aws ec2 create-security-group \
   --group-name clairvision-web \
   --description "ClairVision always-on web host" \
   --region "$REGION" --query 'GroupId' --output text)
 
 aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
-  --protocol tcp --port 22 --cidr "$MY_IP"
+  --protocol tcp --port 22 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
   --protocol tcp --port 80 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --region "$REGION" \
