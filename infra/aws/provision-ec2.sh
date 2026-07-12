@@ -11,7 +11,12 @@ set -euo pipefail
 
 REGION="ap-south-1"                # Mumbai
 KEY_NAME="clairvision-deploy"
-INSTANCE_TYPE="t3.micro"           # matches the free-tier plan
+INSTANCE_TYPE="t3.small"           # bumped from the free-tier t3.micro after
+                                    # a real deploy (~2GB image pull/extract)
+                                    # made the box unresponsive for 11 minutes,
+                                    # and gallery thumbnail bursts OOM-killed
+                                    # the api container — 913MB just wasn't
+                                    # enough headroom alongside db/redis/caddy.
 
 AMI_ID=$(aws ec2 describe-images --owners 099720109477 --region "$REGION" \
   --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
@@ -88,11 +93,20 @@ INSTANCE_ID=$(aws ec2 run-instances \
 echo "Launched $INSTANCE_ID — waiting for it to be running..."
 aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
 
+# Elastic IP: without one, the public IP is released on every stop (a
+# resize like the t3.micro->t3.small bump above requires a stop) and a new
+# random one is assigned on start, silently breaking DNS. Added after
+# exactly that friction the first time an instance type change was needed.
+ALLOC_ID=$(aws ec2 allocate-address --region "$REGION" --domain vpc \
+  --query 'AllocationId' --output text)
+aws ec2 associate-address --region "$REGION" --instance-id "$INSTANCE_ID" \
+  --allocation-id "$ALLOC_ID" >/dev/null
 PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
 
 echo ""
-echo "Instance up: $PUBLIC_IP"
+echo "Instance up: $PUBLIC_IP (Elastic IP, allocation $ALLOC_ID — stable"
+echo "across future stops/resizes, no DNS update needed again)"
 echo "  -> Point api.percepta.codes (A record) at this IP"
 echo "  -> EC2_HOST secret:     $PUBLIC_IP"
 echo "  -> EC2_SSH_USER secret: ubuntu"
