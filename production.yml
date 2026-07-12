@@ -7,16 +7,28 @@
 #   docker compose -f docker-compose.yml -f production.yml up -d api caddy
 #
 # db, redis, api, and caddy run here. The frontend deploys separately on
-# Vercel; the pipeline worker is a short-lived instance spun up on its own
-# (see the AWS feasibility memo) — neither belongs in this always-on stack.
-# db/redis keep the base file's 127.0.0.1-only port binding unchanged —
-# nothing outside this host ever needs to reach them directly.
+# Vercel; the pipeline worker is a short-lived, on-demand EC2 instance spun
+# up on its own (see the AWS feasibility memo) — it does not belong in this
+# always-on stack, but it DOES need to reach this host's Postgres and Redis
+# over the network, so db/redis no longer keep the base file's
+# 127.0.0.1-only port binding. This is a deliberate, confirmed change (not
+# an oversight) tied to the new on-demand pipeline VM: access control now
+# lives entirely in AWS, via a dedicated pipeline security group that is
+# provisioned separately and allows only that security group to reach
+# ports 5432/6379 — not the whole internet — rather than in the bind
+# address.
 services:
   db:
     restart: unless-stopped
+    # `!override` replaces rather than appends to the base file's
+    # 127.0.0.1:5432:5432 binding (Compose concatenates list fields by
+    # default) — see the api.ports comment below for the same pattern.
+    ports: !override ["5432:5432"]
 
   redis:
     restart: unless-stopped
+    # Same reasoning as db.ports above.
+    ports: !override ["6379:6379"]
 
   api:
     # The base file builds this from source; production pulls the image

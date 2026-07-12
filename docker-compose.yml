@@ -94,7 +94,11 @@ services:
     environment:
       POSTGRES_HOST: db
     volumes:
-      - faiss_indexes:/app/indexes:ro   # read-only: only the worker writes indexes
+      # Writable: the worker still writes indexes directly here in local
+      # dev, but in production the API also lazy-pulls index files from S3
+      # and caches them into this same path when the pipeline worker runs
+      # on a separate host and can no longer share this volume directly.
+      - faiss_indexes:/app/indexes
     depends_on:
       db:
         condition: service_healthy
