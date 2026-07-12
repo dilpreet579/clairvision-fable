@@ -84,6 +84,22 @@ def ensure_pipeline_worker_running() -> None:
             # fetch the instance role's credentials. Learned the hard way on
             # the web VM's own api container.
             MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2},
+            # The Ubuntu jammy AMI's default root volume is 8GB — plenty for
+            # the web VM, nowhere near enough for the pipeline image (CLIP +
+            # ArcFace + NIMA weights baked in, several GB once extracted).
+            # Learned live: cloud-init and the docker pull both wedged
+            # mid-extract with "no space left on device". gp3 costs pennies
+            # for the VM's short lifetime and the volume is deleted with it.
+            BlockDeviceMappings=[
+                {
+                    "DeviceName": "/dev/sda1",
+                    "Ebs": {
+                        "VolumeSize": 40,
+                        "VolumeType": "gp3",
+                        "DeleteOnTermination": True,
+                    },
+                }
+            ],
             TagSpecifications=[
                 {
                     "ResourceType": "instance",
