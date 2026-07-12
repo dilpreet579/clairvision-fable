@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from clairvision_shared.db.enums import EventStatus, EventVisibility
 from clairvision_shared.db.models import Event, Organizer
 from clairvision_shared.faiss_paths import event_index_dir
+from clairvision_shared.faiss_s3 import delete_face_index
 from clairvision_shared.io.source_fetcher import (
     BlockedURLError,
     SourceFetchError,
@@ -155,15 +156,22 @@ def unarchive_event(
 @router.delete("/{event_id}", status_code=204)
 def delete_event(
     event_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     r: redis.Redis = Depends(get_redis),
     _organizer: Organizer = Depends(require_organizer),
 ) -> None:
-    """Full teardown. Order matters: Redis purge, then enqueue the FAISS
-    directory removal (worker-only — the API's faiss_indexes mount is
-    read-only), then evict the in-memory index, and only then commit the
-    DB delete. If the enqueue fails we abort before the commit so the
-    event row survives for a retry."""
+    """Full teardown. Order matters: Redis purge, then enqueue the pipeline-
+    side FAISS directory removal (still useful when a worker happens to be
+    up — e.g. local dev), then evict the in-memory index, then clear both
+    durable copies directly from the API itself (local dir + S3 object) so
+    cleanup doesn't silently depend on a pipeline worker being alive — the
+    on-demand worker is usually NOT running by the time an organizer gets
+    around to deleting an old event, since it self-terminates once idle.
+    Discovered live: a deleted event left its FAISS index orphaned in S3
+    because the enqueued Celery task just sat in an empty queue forever.
+    If the enqueue fails we abort before the commit so the event row
+    survives for a retry."""
     event = _get_event_or_404(db, event_id)
     cache.purge_event_cache(r, event.id)
     try:
@@ -174,8 +182,7 @@ def delete_event(
             detail="could not schedule index cleanup; event not deleted — retry",
         )
     get_manager().invalidate(str(event.id))
-    # Clears the API's own local FAISS cache copy — a real independent copy
-    # of what's in S3/the pipeline's local disk now, not a shared-volume view.
     shutil.rmtree(event_index_dir(str(event.id)), ignore_errors=True)
+    background_tasks.add_task(delete_face_index, str(event.id))
     db.delete(event)  # FK ondelete=CASCADE sweeps images/faces/embeddings/errors
     db.commit()

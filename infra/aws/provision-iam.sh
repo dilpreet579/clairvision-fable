@@ -86,9 +86,9 @@ WEB_POLICY=$(cat <<JSON
       "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/${PIPELINE_ROLE_NAME}"
     },
     {
-      "Sid": "ReadFaissIndexes",
+      "Sid": "ReadAndDeleteFaissIndexes",
       "Effect": "Allow",
-      "Action": "s3:GetObject",
+      "Action": ["s3:GetObject", "s3:DeleteObject"],
       "Resource": "${BUCKET_ARN}/*"
     },
     {
