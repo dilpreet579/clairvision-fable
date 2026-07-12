@@ -6,6 +6,7 @@ never hardcode a threshold in logic; read it from Settings.
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -89,8 +90,26 @@ class Settings(BaseSettings):
     # False only for local http:// dev; must be true wherever the app is
     # reachable over anything but localhost.
     cookie_secure: bool = True
+    # "lax" when the frontend and API share a host (current Docker Compose
+    # deploy, local dev). "none" is required if they're ever split across
+    # hosts (e.g. frontend on Vercel, API on its own domain) — a Lax cookie
+    # is not attached to cross-site fetch() calls at all, so the browser
+    # would silently stop sending the session cookie to the API.
+    session_cookie_samesite: str = "lax"
     # Frontend base URL, used to build invite/reset links embedded in emails.
     public_app_url: str = "http://localhost:3000"
+
+    @model_validator(mode="after")
+    def _validate_samesite_secure(self) -> "Settings":
+        # Browsers reject `SameSite=None` outright unless `Secure` is also
+        # set — failing at boot beats a session cookie the browser silently
+        # drops on every login.
+        if self.session_cookie_samesite.lower() == "none" and not self.cookie_secure:
+            raise ValueError(
+                "SESSION_COOKIE_SAMESITE=none requires COOKIE_SECURE=true "
+                "(browsers refuse SameSite=None cookies without Secure)"
+            )
+        return self
 
     # ── Resend (transactional email) ──
     resend_api_key: str = ""
