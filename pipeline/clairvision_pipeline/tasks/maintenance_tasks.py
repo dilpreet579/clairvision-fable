@@ -9,6 +9,7 @@ import logging
 import shutil
 
 from clairvision_shared.faiss_paths import event_index_dir
+from clairvision_shared.faiss_s3 import delete_face_index
 
 from ..celery_app import celery_app
 
@@ -18,7 +19,13 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="pipeline.delete_event_index")
 def delete_event_index(event_id: str) -> None:
     """Best-effort removal of an event's FAISS index directory. Idempotent:
-    a missing directory (zero-face event, or a retry) is a no-op."""
+    a missing directory (zero-face event, or a retry) is a no-op.
+
+    Also removes the durable S3 copy — the local directory and S3 are two
+    independent copies now that the pipeline runs on its own EC2 host, so
+    both must be cleared or a deleted event leaves an orphan in the bucket
+    forever."""
     path = event_index_dir(event_id)
     shutil.rmtree(path, ignore_errors=True)
     logger.info("removed FAISS index directory for event %s (%s)", event_id, path)
+    delete_face_index(event_id)

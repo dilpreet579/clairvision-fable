@@ -17,6 +17,7 @@ import numpy as np
 from clairvision_shared.db.enums import EventStatus, ImageStatus, PipelineStage
 from clairvision_shared.db.models import Event, Face, FaceEmbedding, Image
 from clairvision_shared.db.session import get_sessionmaker
+from clairvision_shared.faiss_s3 import upload_face_index
 from clairvision_shared.io.image_utils import ImageDecodeError, decode_image
 from clairvision_shared.io.source_fetcher import (
     SourceFetchError,
@@ -115,6 +116,12 @@ def build_face_index(_results: list, event_id: str) -> None:
     """Chord callback: publish the FAISS index, then (and only then) ready."""
     try:
         indexed = build_and_publish_face_index(event_id)
+        if indexed > 0:
+            # Raises after exhausting its own retries — let it propagate to
+            # the except below. The VM is about to self-terminate, so an
+            # unuploaded index is gone forever; this must fail the event
+            # rather than silently mark it READY with no durable index.
+            upload_face_index(event_id)
 
         Session = get_sessionmaker()
         with Session() as session:

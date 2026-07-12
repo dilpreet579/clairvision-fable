@@ -19,11 +19,21 @@ RUN pip install -e /app/shared
 
 COPY pipeline/pyproject.toml /app/pipeline/pyproject.toml
 COPY pipeline/clairvision_pipeline/ /app/pipeline/clairvision_pipeline/
+COPY pipeline/weights/ /app/weights/
 # torch first from the CPU index (see api/Dockerfile note), then the
 # package, then facenet-pytorch --no-deps (torch<2.3 pin conflict).
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu \
     && pip install -e /app/pipeline \
     && pip install --no-deps "facenet-pytorch>=2.6"
+
+# Warm the model registry at build time so weights (NIMA baked in above,
+# CLIP/MTCNN/ArcFace downloaded here) are already resident in the image —
+# a bare EC2 `docker run` has no repo checkout / bind-mount to fall back on,
+# and the first real task must not pay a cold-download tax.
+RUN python3 -c "from clairvision_pipeline.models.model_registry import get_nima, get_clip, get_mtcnn, get_arcface; get_nima(); get_clip(); get_mtcnn(); get_arcface()"
+
+COPY pipeline/standalone-entrypoint.sh /app/standalone-entrypoint.sh
+RUN chmod +x /app/standalone-entrypoint.sh
 
 # concurrency=1: every prefork child loads its OWN copy of all models
 # (~4GB+ each); the default (nproc children) multiplies that by core count.
