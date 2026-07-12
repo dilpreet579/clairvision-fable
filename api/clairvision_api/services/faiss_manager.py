@@ -1,10 +1,12 @@
 """Lazy-loading LRU manager for per-event FAISS indexes.
 
-Indexes are derived artifacts (pgvector is the source of truth), written
-atomically by the pipeline worker and mounted read-only here. Loaded on
-first search for an event, evicted LRU beyond FAISS_MAX_LOADED_INDEXES —
-eviction just drops the reference (disk copy is authoritative), keeping
-the always-on CPU API from ballooning across many events.
+Indexes are derived artifacts (pgvector is the source of truth), built by
+the pipeline worker and published to S3. The API's local copy under
+FAISS_INDEX_PATH is an independent cache, not a shared volume — missing
+locally, it's pulled from S3 on first search for an event, then loaded and
+evicted LRU beyond FAISS_MAX_LOADED_INDEXES — eviction just drops the
+reference (S3/disk is authoritative), keeping the always-on CPU API from
+ballooning across many events.
 """
 import logging
 import os
@@ -35,7 +37,13 @@ class FaissIndexManager:
 
         path = faces_index_path(event_id)
         if not os.path.exists(path):
-            return None
+            # Local import avoids any import-cycle risk between faiss_manager
+            # and clairvision_shared.faiss_s3.
+            from clairvision_shared.faiss_s3 import download_face_index
+
+            if not download_face_index(event_id):
+                # No S3 object either — legitimate zero-face event.
+                return None
         index = faiss.read_index(path)
         try:
             faiss.extract_index_ivf(index).nprobe = settings.faiss_nprobe

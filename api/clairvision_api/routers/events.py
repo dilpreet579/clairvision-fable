@@ -1,12 +1,14 @@
+import shutil
 import uuid
 from datetime import datetime, timezone
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from clairvision_shared.db.enums import EventStatus, EventVisibility
 from clairvision_shared.db.models import Event, Organizer
+from clairvision_shared.faiss_paths import event_index_dir
 from clairvision_shared.io.source_fetcher import (
     BlockedURLError,
     SourceFetchError,
@@ -20,6 +22,7 @@ from ..celery_client import enqueue_delete_event_index, enqueue_orchestrate_even
 from ..deps import get_db, get_redis
 from ..services import image_cache_service as cache
 from ..services.faiss_manager import get_manager
+from ..services.pipeline_vm_service import ensure_pipeline_worker_running
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -34,6 +37,7 @@ def _get_event_or_404(db: Session, event_id: uuid.UUID) -> Event:
 @router.post("", response_model=EventRead, status_code=201)
 def create_event(
     payload: EventCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _organizer: Organizer = Depends(require_organizer),
 ) -> Event:
@@ -54,6 +58,9 @@ def create_event(
     db.add(event)
     db.commit()
     enqueue_orchestrate_event(str(event.id))
+    # Runs after the response is sent — zero added latency, and any
+    # exception stays isolated here (the function itself never raises too).
+    background_tasks.add_task(ensure_pipeline_worker_running)
     return event
 
 
@@ -167,5 +174,8 @@ def delete_event(
             detail="could not schedule index cleanup; event not deleted — retry",
         )
     get_manager().invalidate(str(event.id))
+    # Clears the API's own local FAISS cache copy — a real independent copy
+    # of what's in S3/the pipeline's local disk now, not a shared-volume view.
+    shutil.rmtree(event_index_dir(str(event.id)), ignore_errors=True)
     db.delete(event)  # FK ondelete=CASCADE sweeps images/faces/embeddings/errors
     db.commit()
