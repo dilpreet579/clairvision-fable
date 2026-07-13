@@ -84,6 +84,23 @@ def purge_event_cache(r: redis.Redis, event_id: uuid.UUID) -> int:
     return removed
 
 
+def _fetch_raw_source(
+    db: Session, event_id: uuid.UUID, image_id: uuid.UUID
+) -> bytes:
+    """Fetch an image's source bytes WITHOUT decoding — the thumbnail path
+    draft-decodes these straight to thumbnail size, so a full-resolution
+    decode of the original (the ~100MB/image spike that OOM-killed the API
+    under concurrent cold-cache gallery load) never happens for thumbnails."""
+    image = db.get(Image, image_id)
+    if image is None or image.event_id != event_id:
+        raise ImageNotFound()
+    event = db.get(Event, event_id)
+    try:
+        return fetch_bytes(join_source_ref(event.source_url, image.source_ref))
+    except Exception as exc:
+        raise SourceUnavailable(str(exc)) from exc
+
+
 def get_thumbnail(
     db: Session, r: redis.Redis, event_id: uuid.UUID, image_id: uuid.UUID, size: int
 ) -> bytes:
@@ -91,12 +108,19 @@ def get_thumbnail(
     cached = r.get(key)
     if cached is not None:
         return cached
-    orig = get_original(db, r, event_id, image_id)
-    # Scaled decode, not decode_image: the cached "original" here is
-    # already our own re-encoded JPEG (from _fetch_and_cache_original),
-    # but it's still full-resolution — decoding it in full just to shrink
-    # it to `size` is exactly the memory spike that OOM-killed the API
-    # under a real gallery's concurrent thumbnail load.
-    thumb = make_thumbnail(decode_image_scaled(orig, size), size)
+    # Draft-decode straight to `size` — never full-decode the original just to
+    # shrink it. Prefer an already-cached original (populated by a /full view);
+    # otherwise fetch raw source bytes. `decode_image_scaled` uses the JPEG
+    # codec's native downscaling, so peak memory is a few MB, not ~100MB — this
+    # is what lets the small web VM survive a concurrent cold-cache gallery load.
+    # The result is still decoded + re-encoded (make_thumbnail), so raw fetched
+    # bytes are never echoed.
+    src = r.get(_orig_key(event_id, image_id))
+    if src is None:
+        src = _fetch_raw_source(db, event_id, image_id)
+    try:
+        thumb = make_thumbnail(decode_image_scaled(src, size), size)
+    except ImageDecodeError as exc:
+        raise SourceUnavailable(f"source returned undecodable bytes: {exc}") from exc
     r.setex(key, get_settings().image_cache_ttl_thumbnail_seconds, thumb)
     return thumb
