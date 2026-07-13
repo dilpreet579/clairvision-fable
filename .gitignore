@@ -1,6 +1,11 @@
 # Environment
 .env
 
+# Cookie jars and stray logs — may carry live session tokens or secrets
+*.log
+clairvision_c.txt
+clairvision_cookies.txt
+
 # Session handoff notes + anything dropped in here (may contain secrets,
 # keys, generated credentials) — local only, never committed.
 CLAUDE_HANDOFFS.LOCAL/

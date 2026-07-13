@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     postgres_password: str = "changeme"
 
     # ── Redis / Celery ──
-    redis_url: str = "redis://redis:6379/0"
-    celery_broker_url: str = "redis://redis:6379/0"
-    celery_result_backend: str = "redis://redis:6379/1"
+    redis_url: str = "redis://:changeme@redis:6379/0"
+    celery_broker_url: str = "redis://:changeme@redis:6379/0"
+    celery_result_backend: str = "redis://:changeme@redis:6379/1"
 
     # ── Models ──
     clip_model: str = "ViT-L/14"
