@@ -179,11 +179,18 @@ def _sync_pipeline_env_to_ssm() -> None:
 
 def _with_host(url: str, host: str) -> str:
     """Swaps the hostname of a `redis://` URL for `host`, leaving
-    scheme/credentials/port/db-index untouched."""
+    scheme/credentials/port/db-index untouched.
+
+    Redis AUTH URLs are password-only (`redis://:pw@host`) — an empty
+    username. Gating on `parts.username` alone silently dropped the
+    password on rewrite, so the pipeline VM booted with a credential-less
+    broker URL and every task hung on NOAUTH. Preserve creds whenever a
+    username OR password is present."""
     parts = urlsplit(url)
     netloc = host if not parts.port else f"{host}:{parts.port}"
-    if parts.username:
-        creds = parts.username if not parts.password else f"{parts.username}:{parts.password}"
+    if parts.username or parts.password:
+        user = parts.username or ""
+        creds = f"{user}:{parts.password}" if parts.password else user
         netloc = f"{creds}@{netloc}"
     return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
