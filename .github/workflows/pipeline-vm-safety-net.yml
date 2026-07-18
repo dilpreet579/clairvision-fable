@@ -75,7 +75,13 @@ jobs:
             MAX_AGE_MINUTES="${{ github.event.inputs.max_age_minutes }}"
             DRY_RUN="${{ github.event.inputs.dry_run }}"
           else
-            MAX_AGE_MINUTES=120
+            # TEMPORARY (2026-07-18): raised from 120 to 360 for the
+            # 1182-image "Placement Day 2026" run, which legitimately needs
+            # >2h on the CPU-only worker. The idle-watchdog still terminates
+            # the VM ~5min after the queue drains; this only stops a genuinely
+            # busy VM being killed mid-run (which loses in-flight tasks and
+            # wedges the chord). REVERT to 120 once that event is `ready`.
+            MAX_AGE_MINUTES=360
             DRY_RUN=false
           fi
 
